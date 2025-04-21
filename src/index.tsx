@@ -11,6 +11,7 @@ import { RouterError } from './pages/RouterError'
 import { Home } from './pages/Home'
 import { ZustandExample } from './pages/ZustandExample'
 import { NotFound } from './pages/NotFound'
+import { MapPage } from './pages/MapPage'
 
 const router: Router = createBrowserRouter([
 	{
@@ -25,6 +26,10 @@ const router: Router = createBrowserRouter([
 			{
 				path: 'zustand-example',
 				element: <ZustandExample />,
+			},
+			{
+				path: 'map',
+				element: <MapPage />,
 			},
 			{
 				path: '*',

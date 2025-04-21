@@ -1,64 +1,43 @@
 import { FunctionComponent, ReactElement } from 'react'
-import {
-	Text,
-	Button,
-	Box,
-	Code,
-	Tooltip,
-	Link,
-	useDisclosure,
-	Modal,
-	ModalOverlay,
-	ModalContent,
-	ModalHeader,
-	ModalCloseButton,
-	ModalBody,
-	ModalFooter,
-} from '@chakra-ui/react'
-import { Logo } from '../components/Logo'
+
+import { Box } from '@chakra-ui/react'
+import { MapComponent } from '../components/Map'
+import { SideNavbar } from '../components/SideNavbar'
 
 export const Home: FunctionComponent = (): ReactElement => {
-	const { isOpen, onOpen, onClose } = useDisclosure()
 	return (
-		<Box>
-			<Logo h="40vmin" pointerEvents="none" />
+		<Box
+			height={'100vh'}
+			width={'100vw'}
+			overflow={'hidden'}
+			position={'relative'}
+			style={{ scrollbarWidth: 'none' }}
+		>
+			{/* Map as background */}
+			<MapComponent />
 
-			<Text my={10}>
-				Edit <Code>src/pages/Home.tsx</Code> and save to reload.{' '}
-				<Link
-					color="teal.500"
-					href="https://chakra-ui.com"
-					target="_blank"
-					rel="noopener noreferrer"
+			{/* Content layer above the map */}
+			<Box
+				position={'absolute'}
+				top={0}
+				left={0}
+				right={0}
+				bottom={0}
+				pointerEvents={'none'}
+				zIndex={10}
+			>
+				{/* Side navbar */}
+				<Box
+					position={'absolute'}
+					left={0}
+					bottom={0}
+					pointerEvents={'auto'}
+					zIndex={1000}
+					height={'100%'}
 				>
-					Learn Chakra
-				</Link>
-			</Text>
-
-			<Tooltip label="This will open a modal" placement="top">
-				<Button onClick={onOpen}>Click this button</Button>
-			</Tooltip>
-
-			<Modal isOpen={isOpen} onClose={onClose}>
-				<ModalOverlay />
-				<ModalContent>
-					<ModalHeader>Example Modal</ModalHeader>
-					<ModalCloseButton />
-					<ModalBody>
-						<Text>
-							Here&apos;s a Chakra UI modal. You can close it by
-							clicking &quot;Close&quot;
-						</Text>
-					</ModalBody>
-
-					<ModalFooter>
-						<Button colorScheme="blue" mr={3} onClick={onClose}>
-							Close
-						</Button>
-						<Button variant="ghost">Secondary Action</Button>
-					</ModalFooter>
-				</ModalContent>
-			</Modal>
+					<SideNavbar />
+				</Box>
+			</Box>
 		</Box>
 	)
 }
