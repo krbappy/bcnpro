@@ -12,6 +12,7 @@ import { Home } from './pages/Home'
 import { ZustandExample } from './pages/ZustandExample'
 import { NotFound } from './pages/NotFound'
 import { MapPage } from './pages/MapPage'
+import { DeliveryTest } from './pages/DeliveryTest'
 
 const router: Router = createBrowserRouter([
 	{
@@ -30,6 +31,10 @@ const router: Router = createBrowserRouter([
 			{
 				path: 'map',
 				element: <MapPage />,
+			},
+			{
+				path: 'delivery',
+				element: <DeliveryTest />,
 			},
 			{
 				path: '*',

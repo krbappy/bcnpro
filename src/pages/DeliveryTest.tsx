@@ -1,12 +1,11 @@
 import { FunctionComponent, ReactElement, useRef, useState } from 'react'
-
 import { Box } from '@chakra-ui/react'
 import { MapComponent } from '../components/Map'
 import { SideNavbar } from '../components/SideNavbar'
 import { DeliveryStepper } from '../components/Delivery'
 import { MapComponentRef } from '../components/Map/MapComponent'
 
-export const Home: FunctionComponent = (): ReactElement => {
+export const DeliveryTest: FunctionComponent = (): ReactElement => {
 	const mapRef = useRef<MapComponentRef>(null)
 	const [mapLoaded, setMapLoaded] = useState(false)
 
@@ -43,15 +42,8 @@ export const Home: FunctionComponent = (): ReactElement => {
 					<SideNavbar />
 				</Box>
 
-				{/* Delivery Stepper - positioned next to the SideNavbar */}
-				<Box
-					position={'absolute'}
-					left={'64px'}
-					top={0}
-					pointerEvents={'auto'}
-					zIndex={900}
-					height={'100%'}
-				>
+				{/* Delivery Stepper */}
+				<Box pointerEvents={'auto'}>
 					<DeliveryStepper mapRef={mapRef} mapLoaded={mapLoaded} />
 				</Box>
 			</Box>

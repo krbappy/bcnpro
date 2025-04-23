@@ -7,11 +7,17 @@ import {
 	Flex,
 	Text,
 	useOutsideClick,
+	IconButton,
 } from '@chakra-ui/react'
-import { FiHome, FiMap, FiSettings, FiInfo, FiLayers } from 'react-icons/fi'
-import { MdOutlineLightMode, MdOutlineDarkMode } from 'react-icons/md'
-import { TbMap, TbSatellite } from 'react-icons/tb'
-import { BsLayersHalf } from 'react-icons/bs'
+import { FiMap, FiLayers, FiUser, FiHelpCircle, FiPlus } from 'react-icons/fi'
+import {
+	MdOutlineLightMode,
+	MdOutlineDarkMode,
+	MdHistory,
+} from 'react-icons/md'
+import { TbMap, TbSatellite, TbTruckDelivery } from 'react-icons/tb'
+import { BsLayersHalf, BsBox } from 'react-icons/bs'
+import { HiOutlineUserGroup } from 'react-icons/hi'
 import { useMapStyle, MapStyleType } from '../context/MapStyleContext'
 
 // Custom theme colors
@@ -57,6 +63,7 @@ const NavItem: FunctionComponent<NavItemProps> = ({
 				cursor="pointer"
 				w="100%"
 				align="center"
+				justifyContent="flex-start"
 				transition="all 0.2s"
 				onClick={onClick}
 			>
@@ -66,23 +73,28 @@ const NavItem: FunctionComponent<NavItemProps> = ({
 					color={
 						isActive ? themeColors.accent : themeColors.secondary
 					}
+					flexShrink={0}
 				/>
-				{isExpanded && (
+				<Box
+					ml={3}
+					width={isExpanded ? 'auto' : '0px'}
+					opacity={isExpanded ? 1 : 0}
+					overflow="hidden"
+					transition="all 0.2s"
+				>
 					<Text
-						ml={3}
 						fontSize="sm"
 						fontWeight={isActive ? 'semibold' : 'medium'}
-						transition="opacity 0.2s"
-						opacity={1}
 						color={
 							isActive
 								? themeColors.accent
 								: themeColors.secondary
 						}
+						whiteSpace="nowrap"
 					>
 						{label}
 					</Text>
-				)}
+				</Box>
 			</Flex>
 		</Tooltip>
 	)
@@ -107,14 +119,21 @@ const MapStyleOption: FunctionComponent<MapStyleOptionProps> = ({
 			cursor="pointer"
 			w="100%"
 			align="center"
+			justifyContent="flex-start"
 			onClick={onClick}
 		>
-			<Icon as={icon} boxSize={5} color={themeColors.secondary} />
+			<Icon
+				as={icon}
+				boxSize={5}
+				color={themeColors.secondary}
+				flexShrink={0}
+			/>
 			<Text
 				ml={3}
 				fontSize="sm"
 				fontWeight="medium"
 				color={themeColors.secondary}
+				whiteSpace="nowrap"
 			>
 				{label}
 			</Text>
@@ -122,9 +141,163 @@ const MapStyleOption: FunctionComponent<MapStyleOptionProps> = ({
 	)
 }
 
+interface HighlightedNavItemProps {
+	icon: React.ElementType
+	label: string
+	isExpanded: boolean
+	onClick?: () => void
+}
+
+const HighlightedNavItem: FunctionComponent<HighlightedNavItemProps> = ({
+	icon,
+	label,
+	isExpanded,
+	onClick,
+}): ReactElement => {
+	return (
+		<Tooltip
+			label={label}
+			placement="right"
+			hasArrow
+			isDisabled={isExpanded}
+			bg={themeColors.accent}
+			color={themeColors.secondary}
+		>
+			<Flex
+				p={3}
+				borderRadius="md"
+				bg={themeColors.accent}
+				_hover={{
+					bg: `${themeColors.accent}80`,
+				}}
+				cursor="pointer"
+				w="100%"
+				align="center"
+				justifyContent="flex-start"
+				transition="all 0.2s"
+				onClick={onClick}
+			>
+				<Icon
+					as={icon}
+					boxSize={5}
+					color={themeColors.secondary}
+					flexShrink={0}
+				/>
+				<Box
+					ml={3}
+					width={isExpanded ? 'auto' : '0px'}
+					opacity={isExpanded ? 1 : 0}
+					overflow="hidden"
+					transition="all 0.2s"
+				>
+					<Text
+						fontSize="sm"
+						fontWeight="semibold"
+						color={themeColors.secondary}
+						whiteSpace="nowrap"
+					>
+						{label}
+					</Text>
+				</Box>
+			</Flex>
+		</Tooltip>
+	)
+}
+
+interface NavItemWithActionProps {
+	icon: React.ElementType
+	label: string
+	isExpanded: boolean
+	isActive?: boolean
+	onClick?: () => void
+	onActionClick?: () => void
+}
+
+const NavItemWithAction: FunctionComponent<NavItemWithActionProps> = ({
+	icon,
+	label,
+	isExpanded,
+	isActive = false,
+	onClick,
+	onActionClick,
+}): ReactElement => {
+	return (
+		<Tooltip
+			label={label}
+			placement="right"
+			hasArrow
+			isDisabled={isExpanded}
+			bg={themeColors.accent}
+			color={themeColors.secondary}
+		>
+			<Flex
+				p={3}
+				borderRadius="md"
+				bg={isActive ? `${themeColors.accent}30` : 'transparent'}
+				_hover={{
+					bg: isActive
+						? `${themeColors.accent}50`
+						: `${themeColors.secondary}10`,
+				}}
+				cursor="pointer"
+				w="100%"
+				align="center"
+				justifyContent="flex-start"
+				transition="all 0.2s"
+				onClick={onClick}
+			>
+				<Icon
+					as={icon}
+					boxSize={5}
+					color={
+						isActive ? themeColors.accent : themeColors.secondary
+					}
+					flexShrink={0}
+				/>
+				<Box
+					ml={3}
+					width={isExpanded ? '100%' : '0px'}
+					opacity={isExpanded ? 1 : 0}
+					overflow="hidden"
+					transition="all 0.2s"
+				>
+					<Flex justify="space-between" w="100%" align="center">
+						<Text
+							fontSize="sm"
+							fontWeight={isActive ? 'semibold' : 'medium'}
+							color={
+								isActive
+									? themeColors.accent
+									: themeColors.secondary
+							}
+							whiteSpace="nowrap"
+						>
+							{label}
+						</Text>
+						<IconButton
+							icon={<FiPlus />}
+							aria-label={`Add ${label}`}
+							size="xs"
+							variant="ghost"
+							color={themeColors.secondary}
+							_hover={{ bg: `${themeColors.accent}30` }}
+							onClick={(e) => {
+								e.stopPropagation()
+								if (onActionClick) onActionClick()
+							}}
+							ml={2}
+							flexShrink={0}
+						/>
+					</Flex>
+				</Box>
+			</Flex>
+		</Tooltip>
+	)
+}
+
 export const SideNavbar: FunctionComponent = (): ReactElement => {
 	const [isExpanded, setIsExpanded] = useState(false)
-	const [activeItem, setActiveItem] = useState('Home')
+	const [activeItem, setActiveItem] = useState('Book delivery')
 	const [isStyleMenuOpen, setIsStyleMenuOpen] = useState(false)
 	const styleMenuRef = useRef(null)
 	const { currentStyle, setMapStyle } = useMapStyle()
@@ -151,15 +324,14 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 		<Box
 			h="100vh"
 			pb={10}
-			pt={2}
+			pt={4}
 			px={2}
 			w={isExpanded ? { base: '48', md: '56' } : { base: '16', md: '16' }}
-			transition="all 0.2s ease-in-out"
+			transition="width 0.2s ease-in-out"
 			bg={themeColors.background}
 			borderRight="1px"
 			borderRightColor={`${themeColors.secondary}20`}
 			position="relative"
-			// p={2}
 			onMouseEnter={() => setIsExpanded(true)}
 			onMouseLeave={() => {
 				setIsExpanded(false)
@@ -168,34 +340,90 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 			overflow="hidden"
 			shadow="md"
 		>
-			<VStack spacing={4} align="start" mt={8} h="100%">
-				<NavItem
-					icon={FiHome}
-					label="Home"
+			{/* Logo at the top with fixed height and positioning */}
+			<Box
+				h="70px"
+				position="relative"
+				display="flex"
+				justifyContent="center"
+				alignItems="center"
+				mb={3}
+			>
+				<Box
+					position="absolute"
+					transition="opacity 0.2s ease-in-out"
+					opacity={isExpanded ? 1 : 0}
+				>
+					<Flex align="center" justify="center" gap={1}>
+						<Icon
+							as={TbTruckDelivery}
+							boxSize={7}
+							color="white"
+							aria-label="BCNPRO"
+						/>
+						<Text fontSize="2xl" fontWeight="bold" color="white">
+							BCNPRO
+						</Text>
+					</Flex>
+				</Box>
+				<Box
+					position="absolute"
+					transition="opacity 0.2s ease-in-out"
+					opacity={isExpanded ? 0 : 1}
+				>
+					<Icon
+						as={TbTruckDelivery}
+						boxSize={7}
+						color="white"
+						aria-label="BCNPRO"
+					/>
+				</Box>
+			</Box>
+
+			<VStack spacing={5} align="start" h="calc(100% - 70px)">
+				{/* Main navigation items */}
+				<HighlightedNavItem
+					icon={BsBox}
+					label="Book delivery"
 					isExpanded={isExpanded}
-					isActive={activeItem === 'Home'}
-					onClick={() => setActiveItem('Home')}
+					onClick={() => setActiveItem('Book delivery')}
 				/>
 				<NavItem
+					icon={MdHistory}
+					label="Delivery history"
+					isExpanded={isExpanded}
+					isActive={activeItem === 'Delivery history'}
+					onClick={() => setActiveItem('Delivery history')}
+				/>
+				<NavItemWithAction
 					icon={FiMap}
-					label="Explore"
+					label="Routes"
 					isExpanded={isExpanded}
-					isActive={activeItem === 'Explore'}
-					onClick={() => setActiveItem('Explore')}
+					isActive={activeItem === 'Routes'}
+					onClick={() => setActiveItem('Routes')}
+					onActionClick={() => console.log('Add new route')}
+				/>
+				<NavItemWithAction
+					icon={HiOutlineUserGroup}
+					label="Teams"
+					isExpanded={isExpanded}
+					isActive={activeItem === 'Teams'}
+					onClick={() => setActiveItem('Teams')}
+					onActionClick={() => console.log('Add new team')}
 				/>
 				<NavItem
-					icon={FiInfo}
-					label="About"
+					icon={FiUser}
+					label="Account"
 					isExpanded={isExpanded}
-					isActive={activeItem === 'About'}
-					onClick={() => setActiveItem('About')}
+					isActive={activeItem === 'Account'}
+					onClick={() => setActiveItem('Account')}
 				/>
 				<NavItem
-					icon={FiSettings}
-					label="Settings"
+					icon={FiHelpCircle}
+					label="Support"
 					isExpanded={isExpanded}
-					isActive={activeItem === 'Settings'}
-					onClick={() => setActiveItem('Settings')}
+					isActive={activeItem === 'Support'}
+					onClick={() => setActiveItem('Support')}
 				/>
 
 				{/* Spacer to push map style selector to bottom */}
@@ -227,6 +455,8 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 							cursor="pointer"
 							w="100%"
 							align="center"
+							justifyContent="flex-start"
+							transition="all 0.2s"
 							onClick={() => setIsStyleMenuOpen(!isStyleMenuOpen)}
 						>
 							<Icon
@@ -237,31 +467,30 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 										? themeColors.accent
 										: themeColors.secondary
 								}
+								flexShrink={0}
 							/>
-							{isExpanded && (
-								<Flex
-									justify="space-between"
-									w="100%"
-									align="center"
+							<Box
+								ml={3}
+								width={isExpanded ? 'auto' : '0px'}
+								opacity={isExpanded ? 1 : 0}
+								overflow="hidden"
+								transition="all 0.2s"
+							>
+								<Text
+									fontSize="sm"
+									fontWeight={
+										isStyleMenuOpen ? 'semibold' : 'medium'
+									}
+									color={
+										isStyleMenuOpen
+											? themeColors.accent
+											: themeColors.secondary
+									}
+									whiteSpace="nowrap"
 								>
-									<Text
-										ml={3}
-										fontSize="sm"
-										fontWeight={
-											isStyleMenuOpen
-												? 'semibold'
-												: 'medium'
-										}
-										color={
-											isStyleMenuOpen
-												? themeColors.accent
-												: themeColors.secondary
-										}
-									>
-										{currentStyle}
-									</Text>
-								</Flex>
-							)}
+									{currentStyle}
+								</Text>
+							</Box>
 						</Flex>
 					</Tooltip>
 
