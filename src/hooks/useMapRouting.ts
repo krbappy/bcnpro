@@ -65,7 +65,7 @@ export function useMapRouting(
 			start: [number, number],
 			end: [number, number],
 			waypoints: [number, number][] = [],
-		): Promise<void> => {
+		): Promise<{ distance: number; distanceKm: string } | void> => {
 			if (!mapRef.current)
 				return Promise.reject(new Error('Map not initialized'))
 
@@ -80,14 +80,20 @@ export function useMapRouting(
 					validateCoordinates(wp),
 				)
 
-				// Add markers for start and end points
+				// Calculate total number of stops
+				const totalStops = 1 + validWaypoints.length + 1
+
+				// Add marker for start point
 				addMarker(validStart, 'origin')
-				addMarker(validEnd, 'destination')
 
 				// Add markers for waypoints if any
 				validWaypoints.forEach((point, index) => {
-					addMarker(point, `waypoint-${index}`)
+					// Use stop number (2, 3, 4, etc.) for intermediate stops
+					addMarker(point, `${index + 2}`)
 				})
+
+				// Add marker for end point - use destination-N format where N is the stop number
+				addMarker(validEnd, `destination-${totalStops}`)
 
 				// Build the coordinates string for the API
 				const coordinates = [validStart, ...validWaypoints, validEnd]
@@ -111,6 +117,11 @@ export function useMapRouting(
 				if (json.routes && json.routes.length > 0) {
 					const route = json.routes[0]
 					const geometry = route.geometry
+
+					// Get the total distance in meters
+					const distanceInMeters = route.distance || 0
+					// Convert to kilometers with 1 decimal place
+					const distanceInKm = (distanceInMeters / 1000).toFixed(1)
 
 					// Zoom to fit the route
 					const bounds = new mapboxgl.LngLatBounds()
@@ -160,7 +171,11 @@ export function useMapRouting(
 						})
 					}
 
-					return Promise.resolve()
+					// Return the distance information
+					return {
+						distance: distanceInMeters,
+						distanceKm: distanceInKm,
+					}
 				} else {
 					return Promise.reject(new Error('No route found'))
 				}

@@ -1,21 +1,30 @@
-import React, { FunctionComponent, ReactElement } from 'react'
-import { Box, Text, Flex } from '@chakra-ui/react'
+import React, {
+	FunctionComponent,
+	ReactElement,
+	useEffect,
+	useState,
+} from 'react'
+import { Box, Text } from '@chakra-ui/react'
 import { MapComponentRef } from '../Map/MapComponent'
 
 // Import hooks
 import { useAddressSelection } from './hooks/useAddressSelection'
 import { useStepperNavigation } from './hooks/useStepperNavigation'
+import { useDeliveryFormStore } from '../../stores/deliveryFormStore'
 
 // Import components
 import { StepperHeader } from './components/StepperHeader'
 import { StepperNav } from './components/StepperNav'
 import { StepperFooter } from './components/StepperFooter'
 import { StopsList } from './components/StopsList'
+import { VehicleSelection } from './components/VehicleSelection'
 
 // Import theme
 import { themeColors } from './theme'
 
 // Special information section
+// Commenting out but keeping component definition in case we need to use it later
+/* 
 const DailyRouteInfo = () => (
 	<Box
 		p={6}
@@ -45,10 +54,27 @@ const DailyRouteInfo = () => (
 		</Flex>
 	</Box>
 )
+*/
 
 interface DeliveryStepperProps {
 	mapRef: React.RefObject<MapComponentRef>
 	mapLoaded: boolean
+}
+
+// Vehicle data mapping for display
+const VEHICLE_NAMES: Record<string, string> = {
+	car: 'Car',
+	suv: 'SUV',
+	'cargo-van': 'Cargo Van',
+	'pickup-truck': 'Pickup Truck',
+	'rack-vehicle': 'Rack Vehicle',
+	'sprinter-van': 'Sprinter Van',
+	'vehicle-with-hitch': 'Vehicle w/ Hitch',
+	'box-truck': 'Box Truck',
+	'box-truck-liftgate': 'BT w/ Liftgate',
+	'open-deck': "20' Open Deck",
+	'hotshot-trailer': 'Hotshot Trailer',
+	flatbed: "48'-53' Flatbed",
 }
 
 export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
@@ -56,7 +82,8 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 	mapLoaded,
 }): ReactElement => {
 	// Initialize hooks
-	const { currentStep, headerContent, nextStep } = useStepperNavigation()
+	const { currentStep, headerContent, nextStep, prevStep, resetStepperForm } =
+		useStepperNavigation()
 
 	const {
 		stops,
@@ -70,7 +97,82 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 		isMapPickingMode,
 		activeAddressIndex,
 		selectedAddresses,
+		routeDistance,
 	} = useAddressSelection(mapRef, mapLoaded)
+
+	// State for vehicle selection
+	const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null)
+
+	// Get the saved form data from the Zustand store
+	const storeData = useDeliveryFormStore((state) => ({
+		savedStops: state.stops,
+		savedAddresses: state.selectedAddresses,
+		savedDistance: state.routeDistance,
+		vehicleType: state.vehicleType,
+	}))
+
+	// Set the selected vehicle from store when component loads
+	useEffect(() => {
+		if (storeData.vehicleType) {
+			setSelectedVehicle(storeData.vehicleType)
+		}
+	}, [storeData.vehicleType])
+
+	// Log the current store data whenever it changes (for debugging)
+	useEffect(() => {
+		console.log('Form store data updated:', storeData)
+	}, [storeData])
+
+	// Handle vehicle selection
+	const handleVehicleSelect = (vehicleType: string) => {
+		setSelectedVehicle(vehicleType)
+	}
+
+	// Get the display name for the selected vehicle
+	const getVehicleDisplayName = (): string => {
+		if (!selectedVehicle) return '-'
+		return VEHICLE_NAMES[selectedVehicle] || selectedVehicle
+	}
+
+	// Handle Next button click - saves data to store
+	const handleNextClick = () => {
+		if (currentStep === 1) {
+			// For Step 1 (Stops), save the stops, addresses and route distance
+			nextStep({
+				stops,
+				selectedAddresses,
+				routeDistance,
+			})
+		} else if (currentStep === 2 && selectedVehicle) {
+			// For Step 2 (Vehicle), save the selected vehicle type
+			nextStep({
+				vehicleType: selectedVehicle,
+			})
+		} else {
+			// For other steps, just navigate without saving for now
+			// In a real app, you would collect and save the form data from each step
+			nextStep()
+		}
+	}
+
+	// Handle Reset button click
+	const handleResetClick = () => {
+		resetForm()
+		resetStepperForm()
+		setSelectedVehicle(null)
+	}
+
+	// Check if Next button should be disabled
+	const isNextButtonDisabled = () => {
+		if (currentStep === 1) {
+			// Disable Next if no origin and destination
+			return !selectedAddresses[0] || !selectedAddresses[stops.length - 1]
+		} else if (currentStep === 2) {
+			// Disable Next if no vehicle selected
+			return !selectedVehicle
+		}
+		return false
+	}
 
 	// Render appropriate content based on current step
 	const renderStepContent = () => {
@@ -91,11 +193,10 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 				)
 			case 2:
 				return (
-					<Box mb={8}>
-						<Text color={themeColors.text}>
-							Vehicle selection options will appear here
-						</Text>
-					</Box>
+					<VehicleSelection
+						onVehicleSelect={handleVehicleSelect}
+						selectedVehicle={selectedVehicle}
+					/>
 				)
 			case 3:
 				return (
@@ -149,6 +250,9 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 			zIndex={100}
 			minWidth="600px"
 			minHeight="100%"
+			display="flex"
+			flexDirection="column"
+			height="100vh"
 		>
 			{/* Header */}
 			<StepperHeader
@@ -160,18 +264,45 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 			{/* Navigation Steps */}
 			<StepperNav currentStep={currentStep} />
 
-			{/* Step Content */}
-			{renderStepContent()}
+			{/* Step Content - Scrollable */}
+			<Box
+				overflowY="auto"
+				height="100%"
+				my={2}
+				pl={2}
+				pr={2}
+				css={{
+					'&::-webkit-scrollbar': {
+						width: '4px',
+					},
+					'&::-webkit-scrollbar-track': {
+						background: themeColors.lightGray,
+					},
+					'&::-webkit-scrollbar-thumb': {
+						background: themeColors.gray,
+						borderRadius: '2px',
+					},
+				}}
+			>
+				{renderStepContent()}
+			</Box>
 
 			{/* Daily Dedicated Routes section */}
-			<DailyRouteInfo />
+			{/* <DailyRouteInfo /> */}
 
-			{/* Footer */}
-			<StepperFooter
-				onReset={resetForm}
-				onNext={nextStep}
-				isLastStep={currentStep === 6}
-			/>
+			{/* Footer - Fixed at bottom */}
+			<Box mt="auto">
+				<StepperFooter
+					onReset={handleResetClick}
+					onNext={handleNextClick}
+					onBack={prevStep}
+					isLastStep={currentStep === 6}
+					currentStep={currentStep}
+					distance={routeDistance.displayValue}
+					isNextDisabled={isNextButtonDisabled()}
+					vehicle={getVehicleDisplayName()}
+				/>
+			</Box>
 		</Box>
 	)
 }

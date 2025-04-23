@@ -12,7 +12,7 @@ export interface MapComponentRef {
 		start: [number, number],
 		end: [number, number],
 		waypoints?: [number, number][],
-	) => Promise<void>
+	) => Promise<{ distance: number; distanceKm: string } | void>
 	flyTo: (center: [number, number], zoom?: number) => void
 	addMarker: (coordinates: [number, number], id: string) => void
 	clearRouteAndMarkers: () => void

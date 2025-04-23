@@ -9,6 +9,12 @@ export interface Address {
 	center: [number, number] // [longitude, latitude]
 }
 
+// Add an interface for the route result
+interface RouteResult {
+	distance: number
+	distanceKm: string
+}
+
 export function useAddressSelection(
 	mapRef: React.RefObject<MapComponentRef>,
 	mapLoaded: boolean,
@@ -22,23 +28,28 @@ export function useAddressSelection(
 	const [activeAddressIndex, setActiveAddressIndex] = useState<number | null>(
 		null,
 	)
+	const [routeDistance, setRouteDistance] = useState<{
+		meters: number
+		displayValue: string
+	}>({ meters: 0, displayValue: '0' })
 	const toast = useToast()
 
 	// Draw route whenever selected addresses change
 	useEffect(() => {
+		// Only attempt to draw a route if we have origin and destination addresses
 		if (
 			mapLoaded &&
 			mapRef.current &&
 			selectedAddresses[0] &&
-			selectedAddresses[1]
+			selectedAddresses[stops.length - 1]
 		) {
 			setRouteError(null)
 			const origin = selectedAddresses[0].center
-			const destination = selectedAddresses[1].center
+			const destination = selectedAddresses[stops.length - 1].center
 
 			// Get intermediate waypoints if there are any
 			const waypoints: [number, number][] = []
-			for (let i = 2; i < stops.length; i++) {
+			for (let i = 1; i < stops.length - 1; i++) {
 				if (selectedAddresses[i]) {
 					waypoints.push(selectedAddresses[i].center)
 				}
@@ -48,11 +59,26 @@ export function useAddressSelection(
 			try {
 				mapRef.current
 					.drawRoute(origin, destination, waypoints)
+					.then((result: RouteResult | void) => {
+						// Update distance if route was drawn successfully
+						if (
+							result &&
+							typeof result === 'object' &&
+							'distance' in result
+						) {
+							setRouteDistance({
+								meters: result.distance,
+								displayValue: `${result.distanceKm} km`,
+							})
+						}
+					})
 					.catch((err) => {
 						console.error('Error drawing route:', err)
 						setRouteError(
 							'Could not calculate route. Please try different addresses.',
 						)
+						// Reset distance when there's an error
+						setRouteDistance({ meters: 0, displayValue: '0' })
 						toast({
 							title: 'Route Error',
 							description:
@@ -67,7 +93,12 @@ export function useAddressSelection(
 				setRouteError(
 					'Could not calculate route. Please try different addresses.',
 				)
+				// Reset distance when there's an error
+				setRouteDistance({ meters: 0, displayValue: '0' })
 			}
+		} else {
+			// Reset distance when we don't have enough addresses
+			setRouteDistance({ meters: 0, displayValue: '0' })
 		}
 	}, [selectedAddresses, mapLoaded, stops, toast, mapRef])
 
@@ -221,28 +252,96 @@ export function useAddressSelection(
 	}, [isMapPickingMode, activeAddressIndex, mapLoaded, mapRef, toast])
 
 	const addStop = () => {
+		// Simply add a new stop and don't move any addresses
 		setStops([...stops, stops.length + 1])
 	}
 
 	const removeStop = (index: number) => {
-		const newStops = stops.filter((_, i) => i !== index)
-		setStops(newStops)
+		// Can't remove origin or destination if there are only 2 stops
+		if (stops.length <= 2) return
 
-		// Also remove the selected address for this stop
-		const newSelectedAddresses = { ...selectedAddresses }
+		// Store current addresses before modification
+		const oldAddresses = { ...selectedAddresses }
+		const lastIndex = stops.length - 1
 
-		// First delete the address at the removed index
-		delete newSelectedAddresses[index]
+		// Special handling for removing the destination
+		if (index === lastIndex) {
+			// If removing the last stop (destination), we need to make the previous stop the new destination
+			// Remove the stop from the array
+			const newStops = stops.filter((_, i) => i !== index)
+			setStops(newStops)
 
-		// Then reindex all addresses with higher indices
-		for (let i = index + 1; i < stops.length; i++) {
-			if (newSelectedAddresses[i]) {
-				newSelectedAddresses[i - 1] = newSelectedAddresses[i]
-				delete newSelectedAddresses[i]
-			}
+			// No need to reindex if removing the last element
+			setSelectedAddresses(oldAddresses)
+
+			return
 		}
 
-		setSelectedAddresses(newSelectedAddresses)
+		// Special handling for intermediate stops
+		if (index > 0 && index < lastIndex) {
+			const newStops = stops.filter((_, i) => i !== index)
+			setStops(newStops)
+
+			// Create new addresses object
+			const newSelectedAddresses: Record<number, Address> = {}
+
+			// Keep origin address
+			if (oldAddresses[0]) {
+				newSelectedAddresses[0] = oldAddresses[0]
+			}
+
+			// Keep destination address at the new last position
+			if (oldAddresses[lastIndex]) {
+				newSelectedAddresses[newStops.length - 1] =
+					oldAddresses[lastIndex]
+			}
+
+			// Shift intermediate addresses to fill the gap
+			for (let i = 1; i < index; i++) {
+				if (oldAddresses[i]) {
+					newSelectedAddresses[i] = oldAddresses[i]
+				}
+			}
+
+			// Shift addresses after the removed index
+			for (let i = index + 1; i < lastIndex; i++) {
+				if (oldAddresses[i]) {
+					newSelectedAddresses[i - 1] = oldAddresses[i]
+				}
+			}
+
+			setSelectedAddresses(newSelectedAddresses)
+			return
+		}
+
+		// Handle removing the origin (index === 0)
+		if (index === 0) {
+			const newStops = stops.filter((_, i) => i !== index)
+			setStops(newStops)
+
+			// Create new addresses object
+			const newSelectedAddresses: Record<number, Address> = {}
+
+			// New origin is the old stop 1
+			if (oldAddresses[1]) {
+				newSelectedAddresses[0] = oldAddresses[1]
+			}
+
+			// Keep destination address at the new last position
+			if (oldAddresses[lastIndex]) {
+				newSelectedAddresses[newStops.length - 1] =
+					oldAddresses[lastIndex]
+			}
+
+			// Shift intermediate addresses
+			for (let i = 2; i < lastIndex; i++) {
+				if (oldAddresses[i]) {
+					newSelectedAddresses[i - 1] = oldAddresses[i]
+				}
+			}
+
+			setSelectedAddresses(newSelectedAddresses)
+		}
 	}
 
 	const resetForm = () => {
@@ -278,19 +377,21 @@ export function useAddressSelection(
 					typeof mapRef.current.drawRoute === 'function'
 				) {
 					try {
-						// When drawing a single marker, use the same point for start and end
-						// But pass the correct marker number (1 for origin, 2 for destination)
+						// Clear previous markers
+						mapRef.current.clearRouteAndMarkers()
+
+						// When drawing a single marker, determine appropriate marker id
 						if (index === 0) {
-							// Origin - use marker 1
-							mapRef.current.clearRouteAndMarkers()
-							mapRef.current.addMarker(address.center, '1')
-						} else if (index === 1) {
-							// Destination - use marker 2
-							mapRef.current.clearRouteAndMarkers()
-							mapRef.current.addMarker(address.center, '2')
+							// Origin - always use marker 1
+							mapRef.current.addMarker(address.center, 'origin')
+						} else if (index === stops.length - 1) {
+							// Final stop (destination) - mark as destination with proper number
+							mapRef.current.addMarker(
+								address.center,
+								`destination-${stops.length}`,
+							)
 						} else {
-							// Waypoint - use the index+1 as the marker number
-							mapRef.current.clearRouteAndMarkers()
+							// Intermediate stop - use the index+1 as the marker number
 							mapRef.current.addMarker(
 								address.center,
 								`${index + 1}`,
@@ -302,24 +403,69 @@ export function useAddressSelection(
 				} else if (Object.keys(updatedAddresses).length > 1) {
 					// If we have multiple addresses, try to draw a complete route
 					// Check if we have both origin and destination
-					if (updatedAddresses[0] && updatedAddresses[1]) {
+					if (
+						updatedAddresses[0] &&
+						updatedAddresses[stops.length - 1]
+					) {
 						const origin = updatedAddresses[0].center
-						const destination = updatedAddresses[1].center
+						const destination =
+							updatedAddresses[stops.length - 1].center
 
 						// Get intermediate waypoints if there are any
 						const waypoints: [number, number][] = []
-						for (let i = 2; i < stops.length; i++) {
+						for (let i = 1; i < stops.length - 1; i++) {
 							if (updatedAddresses[i]) {
 								waypoints.push(updatedAddresses[i].center)
 							}
 						}
 
-						// Draw the route
+						// Create a Map for storing marker numbers
+						const markerNumbers = new Map<string, string>()
+						markerNumbers.set(
+							'destination',
+							stops.length.toString(),
+						)
+
+						// Draw the route with explicit destination number
 						mapRef.current
 							.drawRoute(origin, destination, waypoints)
 							.catch((err) =>
 								console.error('Error drawing route:', err),
 							)
+					}
+				}
+
+				// If we have either origin or destination, but not both, just draw markers
+				else {
+					try {
+						// Clear previous routes and markers
+						mapRef.current.clearRouteAndMarkers()
+
+						// Add markers for all available addresses
+						Object.entries(updatedAddresses).forEach(
+							([key, addr]) => {
+								const keyNum = parseInt(key)
+								if (keyNum === 0) {
+									mapRef.current?.addMarker(
+										addr.center,
+										'origin',
+									)
+								} else if (keyNum === stops.length - 1) {
+									// Use the new destination-X format
+									mapRef.current?.addMarker(
+										addr.center,
+										`destination-${stops.length}`,
+									)
+								} else {
+									mapRef.current?.addMarker(
+										addr.center,
+										`${keyNum + 1}`,
+									)
+								}
+							},
+						)
+					} catch (error) {
+						console.error('Error displaying markers:', error)
 					}
 				}
 			}
@@ -361,6 +507,7 @@ export function useAddressSelection(
 		routeError,
 		isMapPickingMode,
 		activeAddressIndex,
+		routeDistance,
 		addStop,
 		removeStop,
 		resetForm,

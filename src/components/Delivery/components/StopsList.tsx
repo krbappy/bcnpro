@@ -29,7 +29,7 @@ export const StopsList = ({
 	selectedAddresses,
 }: StopsListProps): ReactElement => {
 	return (
-		<Flex justify="center" align="center" flexDirection="column">
+		<Flex justify="center" align="center" flexDirection="column" w={'100%'}>
 			{/* Stops Form */}
 			<Box mb={8} width="100%">
 				{stops.map((stop, index) => (
@@ -39,7 +39,7 @@ export const StopsList = ({
 						label={
 							index === 0
 								? 'ORIGIN'
-								: index === 1
+								: index === stops.length - 1
 									? 'DESTINATION'
 									: `STOP ${index}`
 						}

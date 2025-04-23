@@ -118,7 +118,15 @@ export const AddressInput = ({
 									: themeColors.lightGray
 							}
 							color={themeColors.text}
-							_focus={{ borderColor: themeColors.accent }}
+							_focus={{
+								borderColor: themeColors.accent,
+								outline: 'none',
+								boxShadow: 'none',
+							}}
+							_active={{
+								borderColor: themeColors.accent,
+								boxShadow: 'none',
+							}}
 							value={inputValue}
 							onChange={handleInputChange}
 							onFocus={() => {
@@ -127,6 +135,7 @@ export const AddressInput = ({
 								}
 							}}
 							isDisabled={isThisInputInPickingMode}
+							_hover={{ borderColor: themeColors.accent }}
 						/>
 						<InputRightElement>
 							<CloseIcon
@@ -162,6 +171,19 @@ export const AddressInput = ({
 						borderRadius="md"
 						onClick={handleMapPickingClick}
 					/>
+					{showRemoveButton && onRemove && (
+						<IconButton
+							ml={2}
+							aria-label="Remove stop"
+							icon={<CloseIcon />}
+							variant="outline"
+							color={themeColors.gray}
+							borderColor={themeColors.lightGray}
+							size="md"
+							borderRadius="md"
+							onClick={onRemove}
+						/>
+					)}
 				</Flex>
 
 				{/* Address suggestions dropdown */}
@@ -201,20 +223,6 @@ export const AddressInput = ({
 					</Box>
 				)}
 			</Box>
-
-			{showRemoveButton && onRemove && (
-				<IconButton
-					ml={2}
-					aria-label="Remove stop"
-					icon={<CloseIcon />}
-					variant="outline"
-					color={themeColors.gray}
-					borderColor={themeColors.lightGray}
-					size="md"
-					borderRadius="md"
-					onClick={onRemove}
-				/>
-			)}
 		</Flex>
 	)
 }
