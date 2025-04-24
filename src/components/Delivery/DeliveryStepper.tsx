@@ -10,7 +10,7 @@ import { MapComponentRef } from '../Map/MapComponent'
 // Import hooks
 import { useAddressSelection } from './hooks/useAddressSelection'
 import { useStepperNavigation } from './hooks/useStepperNavigation'
-import { useDeliveryFormStore } from '../../stores/deliveryFormStore'
+import { useDeliveryFormStore, Order } from '../../stores/deliveryFormStore'
 
 // Import components
 import { StepperHeader } from './components/StepperHeader'
@@ -19,6 +19,8 @@ import { StepperFooter } from './components/StepperFooter'
 import { StopsList } from './components/StopsList'
 import { VehicleSelection } from './components/VehicleSelection'
 import { TimingSelection } from './components/TimingSelection'
+import { OrdersSelection } from './components/OrdersSelection'
+import { InfoForm } from './components/InfoForm'
 
 // Import theme
 import { themeColors } from './theme'
@@ -117,6 +119,12 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 	const [scheduledDate, setScheduledDate] = useState<string>('')
 	const [scheduledTime, setScheduledTime] = useState<string>('')
 
+	// State for vehicle capacity warning
+	const [capacityWarning, setCapacityWarning] = useState<string | null>(null)
+
+	// State for info step validation
+	const [isInfoValid, setIsInfoValid] = useState<boolean>(false)
+
 	// Get the saved form data from the Zustand store
 	const storeData = useDeliveryFormStore((state) => ({
 		savedStops: state.stops,
@@ -124,7 +132,22 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 		savedDistance: state.routeDistance,
 		vehicleType: state.vehicleType,
 		deliveryTiming: state.deliveryTiming,
+		orders: state.orders,
+		totalWeight: state.totalWeight,
+		contactInfo: state.contactInfo,
 	}))
+
+	// State for orders - initialize from the store if available
+	const [ordersData, setOrdersData] = useState<{
+		totalWeight: number
+		orders: Order[]
+	}>({
+		totalWeight:
+			storeData.orders.length > 0
+				? parseFloat(storeData.totalWeight) || 0
+				: 0,
+		orders: storeData.orders.length > 0 ? storeData.orders : [],
+	})
 
 	// Set the selected vehicle from store when component loads
 	useEffect(() => {
@@ -226,6 +249,60 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 		return basePrice * distanceInMiles + vehiclePrice
 	}
 
+	// Handle orders data changes
+	const handleOrdersDataChange = (data: {
+		totalWeight: number
+		orders: Order[]
+	}) => {
+		setOrdersData(data)
+
+		// Check if the weight exceeds vehicle capacity
+		if (selectedVehicle && data.totalWeight > 0) {
+			// Vehicle capacity constants (in lbs)
+			const VEHICLE_CAPACITY = {
+				car: 300,
+				suv: 750,
+				'cargo-van': 3000,
+				'pickup-truck': 1500,
+				'rack-vehicle': 1200,
+				'sprinter-van': 3500,
+				'vehicle-with-hitch': 2000,
+				'box-truck': 5000,
+				'box-truck-liftgate': 5000,
+				'open-deck': 10000,
+				'hotshot-trailer': 15000,
+				flatbed: 40000,
+			}
+
+			const vehicleCapacity =
+				VEHICLE_CAPACITY[
+					selectedVehicle as keyof typeof VEHICLE_CAPACITY
+				] || 0
+
+			if (data.totalWeight > vehicleCapacity) {
+				// Suggest next larger vehicle
+				let suggestedVehicle = 'suv'
+				if (selectedVehicle === 'car') {
+					suggestedVehicle = 'suv'
+				} else if (selectedVehicle === 'suv') {
+					suggestedVehicle = 'pickup-truck'
+				} else if (selectedVehicle === 'pickup-truck') {
+					suggestedVehicle = 'cargo-van'
+				} else {
+					suggestedVehicle = 'sprinter-van'
+				}
+
+				setCapacityWarning(
+					`The total weight (${data.totalWeight.toFixed(1)} lbs) exceeds the ${selectedVehicle} capacity of ${vehicleCapacity} lbs. Please consider upgrading to a ${suggestedVehicle}.`,
+				)
+			} else {
+				setCapacityWarning(null)
+			}
+		} else {
+			setCapacityWarning(null)
+		}
+	}
+
 	// Handle Next button click - saves data to store
 	const handleNextClick = () => {
 		if (currentStep === 1) {
@@ -266,6 +343,37 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 			nextStep({
 				date: selectedTiming.date || '',
 				timeWindow: selectedTiming.type,
+			})
+		} else if (currentStep === 4) {
+			// For Step 4 (Orders), check if there's a capacity warning
+			if (capacityWarning) {
+				alert(
+					'Please adjust your order or change your vehicle type to continue.',
+				)
+				return
+			}
+
+			// Save order data to the store
+			const storeObj = useDeliveryFormStore.getState()
+			storeObj.setOrders(ordersData.orders)
+			storeObj.setTotalWeight(ordersData.totalWeight.toString())
+
+			nextStep({
+				weight: ordersData.totalWeight.toString(),
+				size: ordersData.orders.length.toString(),
+			})
+		} else if (currentStep === 5) {
+			// For Step 5 (Info), validate contact information
+			if (!isInfoValid) {
+				alert(
+					'Please provide required contact information for all stops',
+				)
+				return
+			}
+
+			// Contact info is already saved in the store by the InfoForm component
+			nextStep({
+				info: 'Contact information completed',
 			})
 		} else {
 			// For other steps, just navigate without saving for now
@@ -312,6 +420,19 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 
 				// For other types, just need a valid selection
 				return !selectedTimingType
+			case 4:
+				// Orders step - require at least one valid order with item(s)
+				// Also check if there's a capacity warning
+				return (
+					ordersData.orders.length === 0 ||
+					!ordersData.orders.some(
+						(order) => order.items && order.items.length > 0,
+					) ||
+					!!capacityWarning
+				)
+			case 5:
+				// Info step - require contact info for all stops
+				return !isInfoValid
 			default:
 				return false
 		}
@@ -351,19 +472,15 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 				)
 			case 4:
 				return (
-					<Box mb={8}>
-						<Text color={themeColors.text}>
-							Order details will appear here
-						</Text>
-					</Box>
+					<OrdersSelection
+						onOrdersDataChange={handleOrdersDataChange}
+					/>
 				)
 			case 5:
 				return (
-					<Box mb={8}>
-						<Text color={themeColors.text}>
-							Additional information fields will appear here
-						</Text>
-					</Box>
+					<InfoForm
+						onInfoChange={(isValid) => setIsInfoValid(isValid)}
+					/>
 				)
 			case 6:
 				return (
