@@ -18,6 +18,7 @@ import { StepperNav } from './components/StepperNav'
 import { StepperFooter } from './components/StepperFooter'
 import { StopsList } from './components/StopsList'
 import { VehicleSelection } from './components/VehicleSelection'
+import { TimingSelection } from './components/TimingSelection'
 
 // Import theme
 import { themeColors } from './theme'
@@ -103,12 +104,26 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 	// State for vehicle selection
 	const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null)
 
+	// State for timing selection
+	const [selectedTiming, setSelectedTiming] = useState<{
+		type: string
+		date?: string
+		time?: string
+		isValid?: boolean
+	} | null>(null)
+
+	// Add a direct selectedTimingType state
+	const [selectedTimingType, setSelectedTimingType] = useState<string>('rush')
+	const [scheduledDate, setScheduledDate] = useState<string>('')
+	const [scheduledTime, setScheduledTime] = useState<string>('')
+
 	// Get the saved form data from the Zustand store
 	const storeData = useDeliveryFormStore((state) => ({
 		savedStops: state.stops,
 		savedAddresses: state.selectedAddresses,
 		savedDistance: state.routeDistance,
 		vehicleType: state.vehicleType,
+		deliveryTiming: state.deliveryTiming,
 	}))
 
 	// Set the selected vehicle from store when component loads
@@ -116,7 +131,18 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 		if (storeData.vehicleType) {
 			setSelectedVehicle(storeData.vehicleType)
 		}
-	}, [storeData.vehicleType])
+		if (
+			storeData.deliveryTiming?.date ||
+			storeData.deliveryTiming?.timeWindow
+		) {
+			setSelectedTiming({
+				type: storeData.deliveryTiming.date || 'rush',
+				date: storeData.deliveryTiming.date || undefined,
+				time: storeData.deliveryTiming.timeWindow || undefined,
+				isValid: true,
+			})
+		}
+	}, [storeData.vehicleType, storeData.deliveryTiming])
 
 	// Log the current store data whenever it changes (for debugging)
 	useEffect(() => {
@@ -128,10 +154,76 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 		setSelectedVehicle(vehicleType)
 	}
 
+	// Handle timing selection
+	const handleTimingSelect = (timing: {
+		type: string
+		date?: string
+		time?: string
+		isValid?: boolean
+	}) => {
+		console.log('DeliveryStepper received timing:', timing)
+
+		// Update the individual pieces of state
+		setSelectedTimingType(timing.type)
+		setScheduledDate(timing.date || '')
+		setScheduledTime(timing.time || '')
+
+		// Also update the combined state for backward compatibility
+		setSelectedTiming({
+			type: timing.type,
+			date: timing.date || '',
+			time: timing.time || '',
+			isValid: timing.isValid !== false,
+		})
+	}
+
 	// Get the display name for the selected vehicle
 	const getVehicleDisplayName = (): string => {
 		if (!selectedVehicle) return '-'
 		return VEHICLE_NAMES[selectedVehicle] || selectedVehicle
+	}
+
+	// Get the display name for the selected timing
+	const getTimingDisplayName = (): string => {
+		// Get timing from Zustand store
+		const storeData = useDeliveryFormStore.getState()
+		return storeData.deliveryTiming.timeWindow || '-'
+	}
+
+	// Get total price for the current selection
+	const getTotalPrice = (): string => {
+		if (currentStep < 3 || !selectedTiming) return '-'
+
+		const basePrice = calculatePrice()
+		let totalPrice = basePrice
+
+		if (selectedTiming.type === 'same-day') {
+			totalPrice = basePrice * 0.9 // 10% discount
+		}
+
+		return `$${totalPrice.toFixed(2)}`
+	}
+
+	// Calculate the price based on distance and vehicle
+	const calculatePrice = (): number => {
+		// Get base price from env or use default
+		const basePrice = import.meta.env.VITE_BASE_PRICE
+			? parseFloat(import.meta.env.VITE_BASE_PRICE as string)
+			: 5 // Default base price
+
+		// Get vehicle-specific price from env
+		const vehicleType = selectedVehicle || 'car'
+		const vehiclePriceKey = `VITE_VEHICLE_PRICE_${vehicleType.toUpperCase().replace(/-/g, '_')}`
+		const vehiclePrice = import.meta.env[vehiclePriceKey]
+			? parseFloat(import.meta.env[vehiclePriceKey] as string)
+			: 1 // Default vehicle price
+
+		// Extract distance in miles
+		const distanceInMiles =
+			parseFloat(routeDistance.displayValue.split(' ')[0]) || 0
+
+		// Calculate price: base * distance + vehicle price
+		return basePrice * distanceInMiles + vehiclePrice
 	}
 
 	// Handle Next button click - saves data to store
@@ -148,9 +240,35 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 			nextStep({
 				vehicleType: selectedVehicle,
 			})
+		} else if (currentStep === 3 && selectedTiming) {
+			// For Step 3 (Timing), save the selected timing
+			const storeObj = useDeliveryFormStore.getState()
+			const isValid =
+				selectedTiming.type !== 'scheduled' ||
+				(Boolean(selectedTiming.date) && Boolean(selectedTiming.time))
+
+			// Only proceed if the timing selection is valid
+			if (!isValid) {
+				alert('Please complete all required timing fields')
+				return
+			}
+
+			// Save to store and proceed
+			storeObj.setDeliveryTiming(
+				selectedTiming.date || '',
+				selectedTiming.type === 'scheduled'
+					? `Scheduled (${selectedTiming.date} at ${selectedTiming.time})`
+					: selectedTiming.type === 'rush'
+						? 'Rush'
+						: 'Same Day',
+				isValid,
+			)
+			nextStep({
+				date: selectedTiming.date || '',
+				timeWindow: selectedTiming.type,
+			})
 		} else {
 			// For other steps, just navigate without saving for now
-			// In a real app, you would collect and save the form data from each step
 			nextStep()
 		}
 	}
@@ -160,19 +278,45 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 		resetForm()
 		resetStepperForm()
 		setSelectedVehicle(null)
+		setSelectedTiming(null)
 	}
 
 	// Check if Next button should be disabled
 	const isNextButtonDisabled = () => {
-		if (currentStep === 1) {
-			// Disable Next if no origin and destination
-			return !selectedAddresses[0] || !selectedAddresses[stops.length - 1]
-		} else if (currentStep === 2) {
-			// Disable Next if no vehicle selected
-			return !selectedVehicle
+		// For debugging
+		console.log('Current step:', currentStep)
+		console.log('Selected timing type:', selectedTimingType)
+		console.log('Scheduled date:', scheduledDate)
+		console.log('Scheduled time:', scheduledTime)
+
+		switch (currentStep) {
+			case 1:
+				// Address step - require both stops to be selected
+				return Object.keys(selectedAddresses).length < 2 || !!routeError
+			case 2:
+				// Vehicle step - require vehicle selection
+				return !selectedVehicle
+			case 3:
+				// Timing step - require valid timing selection
+				if (selectedTimingType === 'scheduled') {
+					// Both date and time are required for scheduled deliveries
+					const valid =
+						Boolean(scheduledDate) && Boolean(scheduledTime)
+					console.log('Scheduled validation check:', {
+						hasDate: Boolean(scheduledDate),
+						hasTime: Boolean(scheduledTime),
+						valid,
+					})
+					return !valid
+				}
+
+				// For other types, just need a valid selection
+				return !selectedTimingType
+			default:
+				return false
 		}
-		return false
 	}
+	console.log('isNextButtonDisabled', isNextButtonDisabled())
 
 	// Render appropriate content based on current step
 	const renderStepContent = () => {
@@ -200,11 +344,10 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 				)
 			case 3:
 				return (
-					<Box mb={8}>
-						<Text color={themeColors.text}>
-							Timing selection options will appear here
-						</Text>
-					</Box>
+					<TimingSelection
+						routeDistance={routeDistance}
+						onTimingSelect={handleTimingSelect}
+					/>
 				)
 			case 4:
 				return (
@@ -301,6 +444,8 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 					distance={routeDistance.displayValue}
 					isNextDisabled={isNextButtonDisabled()}
 					vehicle={getVehicleDisplayName()}
+					timing={getTimingDisplayName()}
+					total={getTotalPrice()}
 				/>
 			</Box>
 		</Box>

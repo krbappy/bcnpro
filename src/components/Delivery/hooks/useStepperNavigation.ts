@@ -51,38 +51,51 @@ export function useStepperNavigation() {
 		switch (currentStep) {
 			case 1:
 				return {
-					title: 'Stops',
-					description: 'Enter origin and destinations below',
+					title: 'STOPS',
+					description:
+						'Please enter your origin and destination addresses.',
 				}
 			case 2:
 				return {
-					title: 'Vehicle',
-					description: 'Choose your preferred delivery vehicle',
+					title: 'VEHICLE',
+					description: 'Select the vehicle type for your delivery.',
 				}
-			case 3:
+			case 3: {
+				// Get the destination address from the store if available
+				const addresses =
+					useDeliveryFormStore.getState().selectedAddresses
+				const stops = useDeliveryFormStore.getState().stops
+
+				// Try to get destination address (last stop)
+				const destAddress =
+					addresses[stops.length - 1]?.place_name ||
+					'3790 S Las Vegas Blvd'
+
 				return {
-					title: 'Timing',
-					description: 'Select delivery date and time window',
+					title: 'TIMING',
+					description: `Choose when you would like us to arrive to ${destAddress}`,
 				}
+			}
 			case 4:
 				return {
-					title: 'Orders',
-					description: 'Enter details about your shipment',
+					title: 'ORDER DETAILS',
+					description: 'Provide details about your order.',
 				}
 			case 5:
 				return {
-					title: 'Info',
-					description: 'Provide additional information',
+					title: 'ADDITIONAL INFO',
+					description:
+						'Add any additional information for your delivery.',
 				}
 			case 6:
 				return {
-					title: 'Review',
-					description: 'Review your delivery details',
+					title: 'REVIEW',
+					description: 'Review your order details before submitting.',
 				}
 			default:
 				return {
-					title: 'Stops',
-					description: 'Enter origin and destinations below',
+					title: 'DELIVERY',
+					description: 'Plan your delivery.',
 				}
 		}
 	}

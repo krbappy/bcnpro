@@ -13,6 +13,7 @@ export interface DeliveryFormState {
 	deliveryTiming: {
 		date: string | null
 		timeWindow: string | null
+		isValid: boolean
 	}
 	orderDetails: {
 		weight: string | null
@@ -30,7 +31,11 @@ export interface DeliveryFormState {
 		displayValue: string
 	}) => void
 	setVehicleType: (vehicleType: string) => void
-	setDeliveryTiming: (date: string, timeWindow: string) => void
+	setDeliveryTiming: (
+		date: string,
+		timeWindow: string,
+		isValid?: boolean,
+	) => void
 	setOrderDetails: (weight: string, size: string) => void
 	setAdditionalInfo: (info: string) => void
 	resetForm: () => void
@@ -45,6 +50,7 @@ export const useDeliveryFormStore = create<DeliveryFormState>((set) => ({
 	deliveryTiming: {
 		date: null,
 		timeWindow: null,
+		isValid: true,
 	},
 	orderDetails: {
 		weight: null,
@@ -57,9 +63,9 @@ export const useDeliveryFormStore = create<DeliveryFormState>((set) => ({
 		set({ stops, selectedAddresses: addresses }),
 	setRouteDistance: (distance) => set({ routeDistance: distance }),
 	setVehicleType: (vehicleType) => set({ vehicleType }),
-	setDeliveryTiming: (date, timeWindow) =>
+	setDeliveryTiming: (date, timeWindow, isValid = true) =>
 		set({
-			deliveryTiming: { date, timeWindow },
+			deliveryTiming: { date, timeWindow, isValid },
 		}),
 	setOrderDetails: (weight, size) =>
 		set({
@@ -75,6 +81,7 @@ export const useDeliveryFormStore = create<DeliveryFormState>((set) => ({
 			deliveryTiming: {
 				date: null,
 				timeWindow: null,
+				isValid: true,
 			},
 			orderDetails: {
 				weight: null,
