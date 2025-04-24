@@ -12,7 +12,7 @@ export interface Address {
 // Add an interface for the route result
 interface RouteResult {
 	distance: number
-	distanceKm: string
+	distanceDisplay: string
 }
 
 export function useAddressSelection(
@@ -68,7 +68,7 @@ export function useAddressSelection(
 						) {
 							setRouteDistance({
 								meters: result.distance,
-								displayValue: `${result.distanceKm} km`,
+								displayValue: `${result.distanceDisplay} mi`,
 							})
 						}
 					})

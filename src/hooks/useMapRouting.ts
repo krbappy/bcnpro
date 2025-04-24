@@ -65,7 +65,7 @@ export function useMapRouting(
 			start: [number, number],
 			end: [number, number],
 			waypoints: [number, number][] = [],
-		): Promise<{ distance: number; distanceKm: string } | void> => {
+		): Promise<{ distance: number; distanceDisplay: string } | void> => {
 			if (!mapRef.current)
 				return Promise.reject(new Error('Map not initialized'))
 
@@ -120,8 +120,10 @@ export function useMapRouting(
 
 					// Get the total distance in meters
 					const distanceInMeters = route.distance || 0
-					// Convert to kilometers with 1 decimal place
-					const distanceInKm = (distanceInMeters / 1000).toFixed(1)
+					// Convert to miles with 1 decimal place
+					const distanceInMiles = (
+						distanceInMeters * 0.000621371
+					).toFixed(1)
 
 					// Zoom to fit the route
 					const bounds = new mapboxgl.LngLatBounds()
@@ -174,7 +176,7 @@ export function useMapRouting(
 					// Return the distance information
 					return {
 						distance: distanceInMeters,
-						distanceKm: distanceInKm,
+						distanceDisplay: distanceInMiles,
 					}
 				} else {
 					return Promise.reject(new Error('No route found'))
