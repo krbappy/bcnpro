@@ -11,13 +11,12 @@ import {
 	Icon,
 	FormControl,
 	FormLabel,
-	IconButton,
 	Alert,
 	AlertIcon,
 	AlertTitle,
 	Collapse,
 } from '@chakra-ui/react'
-import { FiPlus, FiTrash2, FiChevronDown, FiChevronUp } from 'react-icons/fi'
+import { FiPlus, FiChevronDown, FiChevronUp, FiTrash2 } from 'react-icons/fi'
 import { themeColors } from '../theme'
 import { useDeliveryFormStore } from '../../../stores/deliveryFormStore'
 
@@ -148,19 +147,49 @@ export const OrdersSelection: React.FC<OrdersSelectionProps> = ({
 		// Only run when vehicleType changes, not when orders change
 	}, [vehicleType])
 
+	// Delete an order
+	const deleteOrder = (orderId: string) => {
+		// Only allow deleting if there's more than one order
+		if (orders.length > 1) {
+			const newOrders = orders.filter((order) => order.id !== orderId)
+			// Renumber the orders
+			const renumberedOrders = renumberOrders(newOrders)
+			setOrders(renumberedOrders)
+			updateParentAndValidate(renumberedOrders)
+		}
+	}
+
+	// Helper function to renumber all orders and their items sequentially
+	const renumberOrders = (ordersToRenumber: Order[]): Order[] => {
+		return ordersToRenumber.map((order, index) => {
+			const newOrderId = (index + 1).toString()
+
+			// Renumber items within the order
+			const newItems = order.items.map((item, itemIndex) => ({
+				...item,
+				id: `${newOrderId}-${itemIndex + 1}`,
+			}))
+
+			return {
+				...order,
+				id: newOrderId,
+				items: newItems,
+			}
+		})
+	}
+
 	// Add a new order
 	const addOrder = () => {
-		const newOrderId = (orders.length + 1).toString()
 		const newOrders = [
 			...orders,
 			{
-				id: newOrderId,
+				id: (orders.length + 1).toString(),
 				poNumber: '',
 				orderNumber: '',
 				bolNumber: '',
 				items: [
 					{
-						id: `${newOrderId}-1`,
+						id: `${orders.length + 1}-1`,
 						description: '',
 						length: '',
 						width: '',
@@ -172,8 +201,11 @@ export const OrdersSelection: React.FC<OrdersSelectionProps> = ({
 				isOpen: true,
 			},
 		]
-		setOrders(newOrders)
-		updateParentAndValidate(newOrders)
+
+		// Make sure all orders are numbered correctly
+		const renumberedOrders = renumberOrders(newOrders)
+		setOrders(renumberedOrders)
+		updateParentAndValidate(renumberedOrders)
 	}
 
 	// Add an item to a specific order
@@ -203,25 +235,28 @@ export const OrdersSelection: React.FC<OrdersSelectionProps> = ({
 		updateParentAndValidate(newOrders)
 	}
 
-	// Delete an order
-	const deleteOrder = (orderId: string) => {
-		// Only allow deleting if there's more than one order
-		if (orders.length > 1) {
-			const newOrders = orders.filter((order) => order.id !== orderId)
-			setOrders(newOrders)
-			updateParentAndValidate(newOrders)
-		}
-	}
-
 	// Delete an item from an order
 	const deleteItem = (orderId: string, itemId: string) => {
 		const newOrders = orders.map((order) => {
 			if (order.id === orderId) {
 				// Only allow deleting if there's more than one item
 				if (order.items.length > 1) {
+					// First filter out the item to delete
+					const filteredItems = order.items.filter(
+						(item) => item.id !== itemId,
+					)
+
+					// Then renumber the remaining items
+					const renumberedItems = filteredItems.map(
+						(item, index) => ({
+							...item,
+							id: `${order.id}-${index + 1}`,
+						}),
+					)
+
 					return {
 						...order,
-						items: order.items.filter((item) => item.id !== itemId),
+						items: renumberedItems,
 					}
 				}
 			}
@@ -235,15 +270,17 @@ export const OrdersSelection: React.FC<OrdersSelectionProps> = ({
 	const toggleOrderCollapse = (orderId: string) => {
 		const newOrders = orders.map((order) => {
 			if (order.id === orderId) {
+				// Toggle this order's open state
 				return {
 					...order,
 					isOpen: !order.isOpen,
 				}
 			}
+			// Leave all other orders unchanged
 			return order
 		})
+
 		setOrders(newOrders)
-		// No need to update parent as this doesn't affect weight/capacity
 	}
 
 	// Update order information
@@ -362,17 +399,21 @@ export const OrdersSelection: React.FC<OrdersSelectionProps> = ({
 							</HStack>
 							<HStack>
 								{orders.length > 1 && (
-									<IconButton
-										aria-label="Delete order"
-										icon={<FiTrash2 />}
-										size="sm"
-										variant="ghost"
-										colorScheme="red"
+									<Box
 										onClick={(e) => {
 											e.stopPropagation()
 											deleteOrder(order.id)
 										}}
-									/>
+										cursor="pointer"
+										borderRadius="md"
+										p={1}
+										_hover={{
+											bg: 'red.50',
+										}}
+										mr={1}
+									>
+										<FiTrash2 size={18} color="red" />
+									</Box>
 								)}
 								<Icon
 									as={
@@ -486,22 +527,30 @@ export const OrdersSelection: React.FC<OrdersSelectionProps> = ({
 											>
 												{/* Delete item button (only if there's more than one item) */}
 												{order.items.length > 1 && (
-													<IconButton
-														aria-label="Delete item"
-														icon={<FiTrash2 />}
-														size="sm"
-														position="absolute"
-														top={2}
-														right={2}
-														variant="ghost"
-														colorScheme="red"
-														onClick={() =>
+													<Box
+														w={6}
+														h={6}
+														onClick={(e) => {
+															e.stopPropagation()
 															deleteItem(
 																order.id,
 																item.id,
 															)
-														}
-													/>
+														}}
+														cursor="pointer"
+														borderRadius="md"
+														p={1}
+														_hover={{
+															bg: 'red.50',
+														}}
+														justifyContent="center"
+														alignItems="center"
+													>
+														<FiTrash2
+															size={18}
+															color="red"
+														/>
+													</Box>
 												)}
 
 												{/* Item description */}
@@ -546,11 +595,8 @@ export const OrdersSelection: React.FC<OrdersSelectionProps> = ({
 														<InputGroup>
 															<Input
 																type="number"
-																placeholder="In inches"
+																placeholder=""
 																px={2}
-																_placeholder={{
-																	color: 'gray.600',
-																}}
 																value={
 																	item.length ===
 																	''
@@ -577,6 +623,18 @@ export const OrdersSelection: React.FC<OrdersSelectionProps> = ({
 																		themeColors.accent,
 																}}
 															/>
+															<Box
+																position="absolute"
+																right="8px"
+																top="50%"
+																transform="translateY(-50%)"
+																color="gray.500"
+																fontSize="sm"
+																pointerEvents="none"
+																zIndex={2}
+															>
+																IN
+															</Box>
 														</InputGroup>
 													</FormControl>
 
@@ -590,11 +648,8 @@ export const OrdersSelection: React.FC<OrdersSelectionProps> = ({
 														<InputGroup>
 															<Input
 																type="number"
-																placeholder="In inches"
+																placeholder=""
 																px={2}
-																_placeholder={{
-																	color: 'gray.600',
-																}}
 																value={
 																	item.width ===
 																	''
@@ -621,6 +676,18 @@ export const OrdersSelection: React.FC<OrdersSelectionProps> = ({
 																}}
 																color="black"
 															/>
+															<Box
+																position="absolute"
+																right="8px"
+																top="50%"
+																transform="translateY(-50%)"
+																color="gray.500"
+																fontSize="sm"
+																pointerEvents="none"
+																zIndex={2}
+															>
+																IN
+															</Box>
 														</InputGroup>
 													</FormControl>
 
@@ -635,10 +702,7 @@ export const OrdersSelection: React.FC<OrdersSelectionProps> = ({
 															<Input
 																type="number"
 																px={2}
-																_placeholder={{
-																	color: 'gray.600',
-																}}
-																placeholder="In inches"
+																placeholder=""
 																value={
 																	item.height ===
 																	''
@@ -665,6 +729,18 @@ export const OrdersSelection: React.FC<OrdersSelectionProps> = ({
 																}}
 																color="black"
 															/>
+															<Box
+																position="absolute"
+																right="8px"
+																top="50%"
+																transform="translateY(-50%)"
+																color="gray.500"
+																fontSize="sm"
+																pointerEvents="none"
+																zIndex={2}
+															>
+																IN
+															</Box>
 														</InputGroup>
 													</FormControl>
 
@@ -678,11 +754,8 @@ export const OrdersSelection: React.FC<OrdersSelectionProps> = ({
 														<InputGroup>
 															<Input
 																type="number"
-																placeholder="In LBS"
+																placeholder=""
 																px={2}
-																_placeholder={{
-																	color: 'gray.600',
-																}}
 																value={
 																	item.weight ===
 																	''
@@ -709,6 +782,18 @@ export const OrdersSelection: React.FC<OrdersSelectionProps> = ({
 																}}
 																color="black"
 															/>
+															<Box
+																position="absolute"
+																right="8px"
+																top="50%"
+																transform="translateY(-50%)"
+																color="gray.500"
+																fontSize="sm"
+																pointerEvents="none"
+																zIndex={2}
+															>
+																LBS
+															</Box>
 														</InputGroup>
 													</FormControl>
 
@@ -719,36 +804,38 @@ export const OrdersSelection: React.FC<OrdersSelectionProps> = ({
 														>
 															QUANTITY
 														</FormLabel>
-														<Input
-															type="number"
-															placeholder="1"
-															value={
-																item.quantity ===
-																''
-																	? ''
-																	: Number(
-																			item.quantity,
-																		)
-															}
-															onChange={(e) =>
-																updateItemInfo(
-																	order.id,
-																	item.id,
-																	'quantity',
-																	e.target
-																		.value,
-																)
-															}
-															borderColor={
-																themeColors.lightGray
-															}
-															_hover={{
-																borderColor:
-																	themeColors.accent,
-															}}
-															min="1"
-															color="black"
-														/>
+														<InputGroup>
+															<Input
+																type="number"
+																placeholder=""
+																value={
+																	item.quantity ===
+																	''
+																		? ''
+																		: Number(
+																				item.quantity,
+																			)
+																}
+																onChange={(e) =>
+																	updateItemInfo(
+																		order.id,
+																		item.id,
+																		'quantity',
+																		e.target
+																			.value,
+																	)
+																}
+																borderColor={
+																	themeColors.lightGray
+																}
+																_hover={{
+																	borderColor:
+																		themeColors.accent,
+																}}
+																min="1"
+																color="black"
+															/>
+														</InputGroup>
 													</FormControl>
 												</HStack>
 											</Box>
