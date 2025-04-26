@@ -171,6 +171,7 @@ export const InfoForm: React.FC<InfoFormProps> = ({ onInfoChange }) => {
 								boxShadow: 'md',
 							}}
 							minWidth="100px"
+							mt={2}
 						>
 							{getStopTypeLabel(index, stops.length)}
 						</Button>
@@ -213,14 +214,6 @@ export const InfoForm: React.FC<InfoFormProps> = ({ onInfoChange }) => {
 										stops.length,
 									)}
 								</Badge>
-								<Text
-									fontSize="lg"
-									fontWeight="bold"
-									mt={1}
-									color="gray.800"
-								>
-									Order: {stopId}
-								</Text>
 							</Box>
 							<Text fontSize="sm" color="gray.600">
 								{getAddressDisplay(selectedAddresses[stopId])}

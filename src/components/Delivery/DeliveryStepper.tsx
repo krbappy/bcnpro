@@ -4,7 +4,7 @@ import React, {
 	useEffect,
 	useState,
 } from 'react'
-import { Box, Text } from '@chakra-ui/react'
+import { Box } from '@chakra-ui/react'
 import { MapComponentRef } from '../Map/MapComponent'
 
 // Import hooks
@@ -21,6 +21,7 @@ import { VehicleSelection } from './components/VehicleSelection'
 import { TimingSelection } from './components/TimingSelection'
 import { OrdersSelection } from './components/OrdersSelection'
 import { InfoForm } from './components/InfoForm'
+import { ReviewForm } from './components/ReviewForm'
 
 // Import theme
 import { themeColors } from './theme'
@@ -85,8 +86,14 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 	mapLoaded,
 }): ReactElement => {
 	// Initialize hooks
-	const { currentStep, headerContent, nextStep, prevStep, resetStepperForm } =
-		useStepperNavigation()
+	const {
+		currentStep,
+		headerContent,
+		nextStep,
+		prevStep,
+		resetStepperForm,
+		goToStep,
+	} = useStepperNavigation()
 
 	const {
 		stops,
@@ -375,6 +382,9 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 			nextStep({
 				info: 'Contact information completed',
 			})
+		} else if (currentStep === 6) {
+			// For Step 6 (Review), just proceed
+			nextStep()
 		} else {
 			// For other steps, just navigate without saving for now
 			nextStep()
@@ -433,6 +443,9 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 			case 5:
 				// Info step - require contact info for all stops
 				return !isInfoValid
+			case 6:
+				// Review step - always enable the Next button
+				return false
 			default:
 				return false
 		}
@@ -483,15 +496,18 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 					/>
 				)
 			case 6:
-				return (
-					<Box mb={8}>
-						<Text color={themeColors.text}>
-							Review summary will appear here
-						</Text>
-					</Box>
-				)
+				return <ReviewForm onEditSection={handleEditSection} />
 			default:
 				return null
+		}
+	}
+
+	// Handle editing a specific section
+	const handleEditSection = (sectionIndex: number) => {
+		// Navigate to the specified step
+		if (sectionIndex >= 1 && sectionIndex <= 5) {
+			// Use the goToStep function from the useStepperNavigation hook
+			goToStep(sectionIndex)
 		}
 	}
 
@@ -501,7 +517,7 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 			top={0}
 			left="0px"
 			right={0}
-			p={6}
+			p={0}
 			bg="white"
 			borderRadius="md"
 			boxShadow="md"
@@ -509,28 +525,27 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 			mx="auto"
 			zIndex={100}
 			minWidth="600px"
-			minHeight="100%"
+			height="100vh"
 			display="flex"
 			flexDirection="column"
-			height="100vh"
 		>
 			{/* Header */}
-			<StepperHeader
-				title={headerContent.title}
-				description={headerContent.description}
-				errorMessage={routeError}
-			/>
+			<Box p={6} pb={3}>
+				<StepperHeader
+					title={headerContent.title}
+					description={headerContent.description}
+					errorMessage={routeError}
+				/>
 
-			{/* Navigation Steps */}
-			<StepperNav currentStep={currentStep} />
+				{/* Navigation Steps */}
+				<StepperNav currentStep={currentStep} />
+			</Box>
 
 			{/* Step Content - Scrollable */}
 			<Box
 				overflowY="auto"
 				height="100%"
-				my={2}
-				pl={2}
-				pr={2}
+				px={6}
 				css={{
 					'&::-webkit-scrollbar': {
 						width: '4px',
@@ -546,9 +561,6 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 			>
 				{renderStepContent()}
 			</Box>
-
-			{/* Daily Dedicated Routes section */}
-			{/* <DailyRouteInfo /> */}
 
 			{/* Footer - Fixed at bottom */}
 			<Box mt="auto">

@@ -13,7 +13,7 @@ export const StepItem = ({
 	isActive,
 	icon,
 }: StepItemProps): ReactElement => {
-	const iconColor = isActive ? '#FCFCFC' : themeColors.text
+	const iconColor = isActive ? '#FFFFFF' : themeColors.text
 	return (
 		<Flex align="center" justify="center" direction="column">
 			<Box
@@ -21,22 +21,28 @@ export const StepItem = ({
 				borderRadius="full"
 				bg={isActive ? themeColors.accent : 'transparent'}
 				color={isActive ? 'white' : themeColors.gray}
-				border={isActive ? 'none' : `1px solid ${themeColors.gray}`}
+				border={
+					isActive ? 'none' : `1px solid ${themeColors.lightGray}`
+				}
 				display="flex"
 				alignItems="center"
 				justifyContent="center"
-				width="40px"
-				height="40px"
+				width="48px"
+				height="48px"
+				boxShadow={isActive ? '0px 2px 5px rgba(0, 0, 0, 0.1)' : 'none'}
 			>
 				{React.cloneElement(icon, {
 					fill: iconColor,
+					size: 20,
 				})}
 			</Box>
 			<Text
 				mt={2}
-				fontSize="sm"
-				color={isActive ? themeColors.text : themeColors.gray}
-				fontWeight={isActive ? 'medium' : 'normal'}
+				fontSize="xs"
+				color={isActive ? themeColors.accent : themeColors.gray}
+				fontWeight={isActive ? 'bold' : 'medium'}
+				textTransform="uppercase"
+				letterSpacing="0.5px"
 			>
 				{label}
 			</Text>
