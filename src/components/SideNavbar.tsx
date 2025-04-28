@@ -410,13 +410,7 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 					isExpanded={isExpanded}
 					onClick={() => setActiveItem('Book delivery')}
 				/>
-				<NavItem
-					icon={MdHistory}
-					label="Delivery history"
-					isExpanded={isExpanded}
-					isActive={activeItem === 'Delivery history'}
-					onClick={() => setActiveItem('Delivery history')}
-				/>
+
 				<NavItemWithAction
 					icon={FiMap}
 					label="Routes"
@@ -425,21 +419,34 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 					onClick={() => setActiveItem('Routes')}
 					onActionClick={() => console.log('Add new route')}
 				/>
-				<NavItemWithAction
-					icon={HiOutlineUserGroup}
-					label="Teams"
-					isExpanded={isExpanded}
-					isActive={activeItem === 'Teams'}
-					onClick={() => setActiveItem('Teams')}
-					onActionClick={() => console.log('Add new team')}
-				/>
-				<NavItem
-					icon={FiUser}
-					label="Account"
-					isExpanded={isExpanded}
-					isActive={activeItem === 'Account'}
-					onClick={() => setActiveItem('Account')}
-				/>
+
+				{currentUser && (
+					<>
+						<NavItem
+							icon={MdHistory}
+							label="Delivery history"
+							isExpanded={isExpanded}
+							isActive={activeItem === 'Delivery history'}
+							onClick={() => setActiveItem('Delivery history')}
+						/>
+						<NavItemWithAction
+							icon={HiOutlineUserGroup}
+							label="Teams"
+							isExpanded={isExpanded}
+							isActive={activeItem === 'Teams'}
+							onClick={() => setActiveItem('Teams')}
+							onActionClick={() => console.log('Add new team')}
+						/>
+						<NavItem
+							icon={FiUser}
+							label="Account"
+							isExpanded={isExpanded}
+							isActive={activeItem === 'Account'}
+							onClick={() => setActiveItem('Account')}
+						/>
+					</>
+				)}
+
 				<NavItem
 					icon={FiHelpCircle}
 					label="Support"
@@ -447,9 +454,10 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 					isActive={activeItem === 'Support'}
 					onClick={() => setActiveItem('Support')}
 				/>
+
 				<NavItem
 					icon={FiLogIn}
-					label={currentUser ? 'Logout' : 'Login/Signup'}
+					label={currentUser ? 'Logout' : 'Login / Sign up'}
 					isExpanded={isExpanded}
 					isActive={false}
 					onClick={handleAuthClick}
@@ -458,101 +466,107 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 				{/* Spacer to push map style selector to bottom */}
 				<Box flex="1" />
 
-				{/* Map Style Selector */}
-				<Box position="relative" w="100%" ref={styleMenuRef}>
-					<Tooltip
-						label="Map Style"
-						placement="right"
-						hasArrow
-						isDisabled={isExpanded}
-						bg={themeColors.accent}
-						color={themeColors.secondary}
-					>
-						<Flex
-							p={3}
-							borderRadius="md"
-							bg={
-								isStyleMenuOpen
-									? `${themeColors.accent}30`
-									: 'transparent'
-							}
-							_hover={{
-								bg: isStyleMenuOpen
-									? `${themeColors.accent}50`
-									: `${themeColors.secondary}10`,
-							}}
-							cursor="pointer"
-							w="100%"
-							align="center"
-							justifyContent="flex-start"
-							transition="all 0.2s"
-							onClick={() => setIsStyleMenuOpen(!isStyleMenuOpen)}
+				{/* Map Style Selector - Only show when logged in */}
+				{currentUser && (
+					<Box position="relative" w="100%" ref={styleMenuRef}>
+						<Tooltip
+							label="Map Style"
+							placement="right"
+							hasArrow
+							isDisabled={isExpanded}
+							bg={themeColors.accent}
+							color={themeColors.secondary}
 						>
-							<Icon
-								as={FiLayers}
-								boxSize={5}
-								color={
+							<Flex
+								p={3}
+								borderRadius="md"
+								bg={
 									isStyleMenuOpen
-										? themeColors.accent
-										: themeColors.secondary
+										? `${themeColors.accent}30`
+										: 'transparent'
 								}
-								flexShrink={0}
-							/>
-							<Box
-								ml={3}
-								width={isExpanded ? 'auto' : '0px'}
-								opacity={isExpanded ? 1 : 0}
-								overflow="hidden"
+								_hover={{
+									bg: isStyleMenuOpen
+										? `${themeColors.accent}50`
+										: `${themeColors.secondary}10`,
+								}}
+								cursor="pointer"
+								w="100%"
+								align="center"
+								justifyContent="flex-start"
 								transition="all 0.2s"
+								onClick={() =>
+									setIsStyleMenuOpen(!isStyleMenuOpen)
+								}
 							>
-								<Text
-									fontSize="sm"
-									fontWeight={
-										isStyleMenuOpen ? 'semibold' : 'medium'
-									}
+								<Icon
+									as={FiLayers}
+									boxSize={5}
 									color={
 										isStyleMenuOpen
 											? themeColors.accent
 											: themeColors.secondary
 									}
-									whiteSpace="nowrap"
+									flexShrink={0}
+								/>
+								<Box
+									ml={3}
+									width={isExpanded ? 'auto' : '0px'}
+									opacity={isExpanded ? 1 : 0}
+									overflow="hidden"
+									transition="all 0.2s"
 								>
-									{currentStyle}
-								</Text>
-							</Box>
-						</Flex>
-					</Tooltip>
-
-					{isStyleMenuOpen && (
-						<Box
-							position="absolute"
-							bottom="100%"
-							left={isExpanded ? '0' : '16'}
-							w={isExpanded ? '100%' : '48'}
-							bg={themeColors.background}
-							borderRadius="md"
-							p={2}
-							shadow="lg"
-							border="1px solid"
-							borderColor={`${themeColors.secondary}20`}
-							zIndex={1001}
-							mb={2}
-						>
-							<VStack spacing={1} align="start">
-								{mapStyles.map((style) => (
-									<MapStyleOption
-										key={style.label}
-										icon={style.icon}
-										label={style.label}
-										onClick={() =>
-											handleStyleChange(style.label)
+									<Text
+										fontSize="sm"
+										fontWeight={
+											isStyleMenuOpen
+												? 'semibold'
+												: 'medium'
 										}
-									/>
-								))}
-							</VStack>
-						</Box>
-					)}
-				</Box>
+										color={
+											isStyleMenuOpen
+												? themeColors.accent
+												: themeColors.secondary
+										}
+										whiteSpace="nowrap"
+									>
+										{currentStyle}
+									</Text>
+								</Box>
+							</Flex>
+						</Tooltip>
+
+						{isStyleMenuOpen && (
+							<Box
+								position="absolute"
+								bottom="100%"
+								left={isExpanded ? '0' : '16'}
+								w={isExpanded ? '100%' : '48'}
+								bg={themeColors.background}
+								borderRadius="md"
+								p={2}
+								shadow="lg"
+								border="1px solid"
+								borderColor={`${themeColors.secondary}20`}
+								zIndex={1001}
+								mb={2}
+							>
+								<VStack spacing={1} align="start">
+									{mapStyles.map((style) => (
+										<MapStyleOption
+											key={style.label}
+											icon={style.icon}
+											label={style.label}
+											onClick={() =>
+												handleStyleChange(style.label)
+											}
+										/>
+									))}
+								</VStack>
+							</Box>
+						)}
+					</Box>
+				)}
 			</VStack>
 
 			<AuthModal isOpen={isOpen} onClose={onClose} />
