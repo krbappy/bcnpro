@@ -11,6 +11,8 @@ import { MapComponentRef } from '../Map/MapComponent'
 import { useAddressSelection } from './hooks/useAddressSelection'
 import { useStepperNavigation } from './hooks/useStepperNavigation'
 import { useDeliveryFormStore, Order } from '../../stores/deliveryFormStore'
+import { AuthModal } from '../AuthModal'
+import { useAuth } from '../../context/AuthContext'
 
 // Import components
 import { StepperHeader } from './components/StepperHeader'
@@ -131,6 +133,10 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 
 	// State for info step validation
 	const [isInfoValid, setIsInfoValid] = useState<boolean>(false)
+
+	// Auth modal state
+	const [isAuthModalOpen, setAuthModalOpen] = useState(false)
+	const { currentUser } = useAuth()
 
 	// Get the saved form data from the Zustand store
 	const storeData = useDeliveryFormStore((state) => ({
@@ -312,6 +318,10 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 
 	// Handle Next button click - saves data to store
 	const handleNextClick = () => {
+		if (currentStep === 6 && !currentUser) {
+			setAuthModalOpen(true)
+			return
+		}
 		if (currentStep === 1) {
 			// For Step 1 (Stops), save the stops, addresses and route distance
 			nextStep({
@@ -575,6 +585,10 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 					vehicle={getVehicleDisplayName()}
 					timing={getTimingDisplayName()}
 					total={getTotalPrice()}
+				/>
+				<AuthModal
+					isOpen={isAuthModalOpen}
+					onClose={() => setAuthModalOpen(false)}
 				/>
 			</Box>
 		</Box>
