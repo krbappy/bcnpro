@@ -48,6 +48,8 @@ export function useAuth() {
 	return context
 }
 
+const BASE_URL = import.meta.env.VITE_BASE_URL || 'http://localhost:5000'
+
 export function AuthProvider({ children }: { children: ReactNode }) {
 	const [currentUser, setCurrentUser] = useState<User | null>(null)
 	const [loading, setLoading] = useState(true)
@@ -66,16 +68,68 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 	}
 
 	const signup = async (email: string, password: string) => {
-		await createUserWithEmailAndPassword(auth, email, password)
-	}
+		const userCredential = await createUserWithEmailAndPassword(
+			auth,
+			email,
+			password,
+		)
+		const user = userCredential.user
 
-	const logout = async () => {
-		await signOut(auth)
+		// Create user in backend
+		try {
+			const response = await fetch(`${BASE_URL}/api/users`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					firebaseUid: user.uid,
+					email: user.email,
+					name: user.displayName || '',
+				}),
+			})
+
+			if (!response.ok) {
+				throw new Error('Failed to create user in backend')
+			}
+		} catch (error) {
+			// If backend creation fails, delete the Firebase user
+			await user.delete()
+			throw new Error('Failed to complete signup process')
+		}
 	}
 
 	const loginWithGoogle = async () => {
 		const provider = new GoogleAuthProvider()
-		await signInWithPopup(auth, provider)
+		const userCredential = await signInWithPopup(auth, provider)
+		const user = userCredential.user
+
+		// Create or update user in backend
+		try {
+			const response = await fetch(`${BASE_URL}/api/users`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					firebaseUid: user.uid,
+					email: user.email,
+					name: user.displayName || '',
+				}),
+			})
+
+			if (!response.ok) {
+				throw new Error('Failed to create/update user in backend')
+			}
+		} catch (error) {
+			// If backend creation fails, delete the Firebase user if it's a new user
+			// For existing users, we might want to handle this differently
+			console.error('Failed to update user in backend:', error)
+		}
+	}
+
+	const logout = async () => {
+		await signOut(auth)
 	}
 
 	const value = {

@@ -4,7 +4,7 @@ import React, {
 	useEffect,
 	useState,
 } from 'react'
-import { Box } from '@chakra-ui/react'
+import { Box, useToast } from '@chakra-ui/react'
 import { MapComponentRef } from '../Map/MapComponent'
 
 // Import hooks
@@ -96,6 +96,8 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 		resetStepperForm,
 		goToStep,
 	} = useStepperNavigation()
+
+	const toast = useToast()
 
 	const {
 		stops,
@@ -317,7 +319,7 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 	}
 
 	// Handle Next button click - saves data to store
-	const handleNextClick = () => {
+	const handleNextClick = async () => {
 		if (currentStep === 6 && !currentUser) {
 			setAuthModalOpen(true)
 			return
@@ -393,8 +395,93 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 				info: 'Contact information completed',
 			})
 		} else if (currentStep === 6) {
-			// For Step 6 (Review), just proceed
-			nextStep()
+			// For Step 6 (Review), submit the booking
+			try {
+				const storeObj = useDeliveryFormStore.getState()
+				console.log('storeObj', storeObj)
+				// First, get the MongoDB user ID using Firebase UID
+				const userResponse = await fetch(
+					`${import.meta.env.VITE_BASE_URL}/api/users/${currentUser?.uid}`,
+					{
+						headers: {
+							Authorization: `Bearer ${await currentUser?.getIdToken()}`,
+						},
+					},
+				)
+
+				if (!userResponse.ok) {
+					throw new Error('Failed to fetch user information')
+				}
+
+				const bookingData = {
+					stops: storeObj.stops,
+					selectedAddresses: Object.fromEntries(
+						Object.entries(storeObj.selectedAddresses).map(
+							([key, value]) => [
+								key,
+								{
+									street: value.place_name,
+									city: '',
+									state: '',
+									zipCode: '',
+									country: '',
+									coordinates: value.center,
+								},
+							],
+						),
+					),
+					routeDistance: storeObj.routeDistance,
+					vehicleType: storeObj.vehicleType,
+					deliveryTiming: storeObj.deliveryTiming,
+					orderDetails: storeObj.orderDetails,
+					orders: storeObj.orders,
+					totalWeight: storeObj.totalWeight,
+					additionalInfo: storeObj.additionalInfo,
+					contactInfo: storeObj.contactInfo,
+				}
+				const bookingDataWithUser = {
+					firebaseUid: currentUser?.uid,
+					...bookingData,
+				}
+				console.log('bookingDataWithUser', bookingDataWithUser)
+
+				const response = await fetch(
+					`${import.meta.env.VITE_BASE_URL}/api/bookings`,
+					{
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							Authorization: `Bearer ${await currentUser?.getIdToken()}`,
+						},
+						body: JSON.stringify(bookingDataWithUser),
+					},
+				)
+
+				if (!response.ok) {
+					throw new Error('Failed to submit booking')
+				}
+
+				// Reset form and show success message
+				handleResetClick()
+				toast({
+					title: 'Booking submitted successfully',
+					status: 'success',
+					duration: 5000,
+					isClosable: true,
+				})
+			} catch (error) {
+				console.error('Error submitting booking:', error)
+				toast({
+					title: 'Failed to submit booking',
+					description:
+						error instanceof Error
+							? error.message
+							: 'An error occurred',
+					status: 'error',
+					duration: 5000,
+					isClosable: true,
+				})
+			}
 		} else {
 			// For other steps, just navigate without saving for now
 			nextStep()
