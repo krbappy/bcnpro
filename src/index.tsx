@@ -13,6 +13,7 @@ import { ZustandExample } from './pages/ZustandExample'
 import { NotFound } from './pages/NotFound'
 import { MapPage } from './pages/MapPage'
 import { DeliveryTest } from './pages/DeliveryTest'
+import { AuthProvider } from './context/AuthContext'
 
 const router: Router = createBrowserRouter([
 	{
@@ -52,7 +53,9 @@ root.render(
 	<React.StrictMode>
 		<ChakraProvider theme={theme}>
 			<ColorModeScript />
-			<RouterProvider router={router} />
+			<AuthProvider>
+				<RouterProvider router={router} />
+			</AuthProvider>
 		</ChakraProvider>
 	</React.StrictMode>,
 )

@@ -8,8 +8,16 @@ import {
 	Text,
 	useOutsideClick,
 	IconButton,
+	useDisclosure,
 } from '@chakra-ui/react'
-import { FiMap, FiLayers, FiUser, FiHelpCircle, FiPlus } from 'react-icons/fi'
+import {
+	FiMap,
+	FiLayers,
+	FiUser,
+	FiHelpCircle,
+	FiPlus,
+	FiLogIn,
+} from 'react-icons/fi'
 import {
 	MdOutlineLightMode,
 	MdOutlineDarkMode,
@@ -19,6 +27,8 @@ import { TbMap, TbSatellite, TbTruckDelivery } from 'react-icons/tb'
 import { BsLayersHalf, BsBox } from 'react-icons/bs'
 import { HiOutlineUserGroup } from 'react-icons/hi'
 import { useMapStyle, MapStyleType } from '../context/MapStyleContext'
+import { AuthModal } from './AuthModal'
+import { useAuth } from '../context/AuthContext'
 
 // Custom theme colors
 const themeColors = {
@@ -297,10 +307,13 @@ const NavItemWithAction: FunctionComponent<NavItemWithActionProps> = ({
 
 export const SideNavbar: FunctionComponent = (): ReactElement => {
 	const [isExpanded, setIsExpanded] = useState(false)
-	const [activeItem, setActiveItem] = useState('Book delivery')
+	const [activeItem, setActiveItem] = useState<string | null>(null)
 	const [isStyleMenuOpen, setIsStyleMenuOpen] = useState(false)
 	const styleMenuRef = useRef(null)
 	const { currentStyle, setMapStyle } = useMapStyle()
+	const { isOpen, onOpen, onClose } = useDisclosure()
+	const { currentUser, logout } = useAuth()
+	const ref = useRef<HTMLDivElement>(null)
 
 	useOutsideClick({
 		ref: styleMenuRef,
@@ -320,8 +333,17 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 		setIsStyleMenuOpen(false)
 	}
 
+	const handleAuthClick = () => {
+		if (currentUser) {
+			logout()
+		} else {
+			onOpen()
+		}
+	}
+
 	return (
 		<Box
+			ref={ref}
 			h="100vh"
 			pb={10}
 			pt={4}
@@ -425,6 +447,13 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 					isActive={activeItem === 'Support'}
 					onClick={() => setActiveItem('Support')}
 				/>
+				<NavItem
+					icon={FiLogIn}
+					label={currentUser ? 'Logout' : 'Login/Signup'}
+					isExpanded={isExpanded}
+					isActive={false}
+					onClick={handleAuthClick}
+				/>
 
 				{/* Spacer to push map style selector to bottom */}
 				<Box flex="1" />
@@ -525,6 +554,8 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 					)}
 				</Box>
 			</VStack>
+
+			<AuthModal isOpen={isOpen} onClose={onClose} />
 		</Box>
 	)
 }
