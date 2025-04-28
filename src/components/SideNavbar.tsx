@@ -9,6 +9,7 @@ import {
 	useOutsideClick,
 	IconButton,
 	useDisclosure,
+	Avatar,
 } from '@chakra-ui/react'
 import {
 	FiMap,
@@ -345,7 +346,7 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 		<Box
 			ref={ref}
 			h="100vh"
-			pb={10}
+			pb={4}
 			pt={4}
 			px={2}
 			w={isExpanded ? { base: '48', md: '56' } : { base: '16', md: '16' }}
@@ -455,15 +456,18 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 					onClick={() => setActiveItem('Support')}
 				/>
 
-				<NavItem
-					icon={FiLogIn}
-					label={currentUser ? 'Logout' : 'Login / Sign up'}
-					isExpanded={isExpanded}
-					isActive={false}
-					onClick={handleAuthClick}
-				/>
+				{/* Remove the login/logout NavItem since we'll have it in the profile section */}
+				{!currentUser && (
+					<NavItem
+						icon={FiLogIn}
+						label="Login / Sign up"
+						isExpanded={isExpanded}
+						isActive={false}
+						onClick={handleAuthClick}
+					/>
+				)}
 
-				{/* Spacer to push map style selector to bottom */}
+				{/* Spacer to push map style selector and profile to bottom */}
 				<Box flex="1" />
 
 				{/* Map Style Selector - Only show when logged in */}
@@ -565,6 +569,68 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 								</VStack>
 							</Box>
 						)}
+					</Box>
+				)}
+
+				{/* User Profile Section */}
+				{currentUser && (
+					<Box
+						w="100%"
+						pt={2}
+						borderTop="1px"
+						borderTopColor={`${themeColors.secondary}20`}
+					>
+						<Flex
+							p={2}
+							borderRadius="md"
+							w="100%"
+							align="center"
+							justify="space-between"
+							transition="all 0.2s"
+						>
+							<Flex align="center">
+								<Avatar
+									size="sm"
+									name={currentUser.displayName || 'User'}
+									src={currentUser.photoURL || undefined}
+									bg={themeColors.accent}
+								/>
+								<Box
+									ml={3}
+									width={isExpanded ? 'auto' : '0px'}
+									opacity={isExpanded ? 1 : 0}
+									overflow="hidden"
+									transition="all 0.2s"
+								>
+									<Text
+										fontSize="sm"
+										fontWeight="medium"
+										color={themeColors.secondary}
+										noOfLines={1}
+									>
+										{currentUser.displayName || 'User'}
+									</Text>
+									<Text
+										fontSize="xs"
+										color={`${themeColors.secondary}80`}
+										noOfLines={1}
+									>
+										{currentUser.email}
+									</Text>
+								</Box>
+							</Flex>
+							{isExpanded && (
+								<IconButton
+									icon={<FiLogIn />}
+									aria-label="Logout"
+									size="sm"
+									variant="ghost"
+									color={themeColors.secondary}
+									_hover={{ bg: `${themeColors.accent}30` }}
+									onClick={logout}
+								/>
+							)}
+						</Flex>
 					</Box>
 				)}
 			</VStack>
