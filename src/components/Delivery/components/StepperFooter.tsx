@@ -69,52 +69,56 @@ export const StepperFooter = ({
 				</Button>
 			)}
 
-			{isReviewStep ? (
-				<HStack spacing={3} mx={2} flex={1} justify="space-around">
-					<Box textAlign="center">
-						<Text
-							fontSize="xs"
-							fontWeight="medium"
-							color={themeColors.gray}
-						>
-							DISTANCE
-						</Text>
-						<Text fontWeight="bold">{distance}</Text>
-					</Box>
-					<Box textAlign="center">
-						<Text
-							fontSize="xs"
-							fontWeight="medium"
-							color={themeColors.gray}
-						>
-							VEHICLE
-						</Text>
-						<Text fontWeight="bold">{vehicle}</Text>
-					</Box>
-					<Box textAlign="center">
-						<Text
-							fontSize="xs"
-							fontWeight="medium"
-							color={themeColors.gray}
-						>
-							TIMING
-						</Text>
-						<Text fontWeight="bold">{timing}</Text>
-					</Box>
-					<Box textAlign="center">
-						<Text
-							fontSize="xs"
-							fontWeight="medium"
-							color={themeColors.gray}
-						>
-							TOTAL
-						</Text>
-						<Text fontWeight="bold">{total}</Text>
-					</Box>
-				</HStack>
-			) : (
-				<Box flex={1}></Box> // Empty space for non-review steps
-			)}
+			<HStack spacing={3} mx={2} flex={1} justify="space-around">
+				<Box textAlign="center">
+					<Text
+						fontSize="xs"
+						fontWeight="medium"
+						color={themeColors.gray}
+					>
+						DISTANCE
+					</Text>
+					<Text fontWeight="bold" color={themeColors.accent}>
+						{distance}
+					</Text>
+				</Box>
+				<Box textAlign="center">
+					<Text
+						fontSize="xs"
+						fontWeight="medium"
+						color={themeColors.gray}
+					>
+						VEHICLE
+					</Text>
+					<Text fontWeight="bold" color={themeColors.accent}>
+						{vehicle}
+					</Text>
+				</Box>
+				<Box textAlign="center">
+					<Text
+						fontSize="xs"
+						fontWeight="medium"
+						color={themeColors.gray}
+					>
+						TIMING
+					</Text>
+					<Text fontWeight="bold" color={themeColors.accent}>
+						{timing}
+					</Text>
+				</Box>
+				<Box textAlign="center">
+					<Text
+						fontSize="xs"
+						fontWeight="medium"
+						color={themeColors.gray}
+					>
+						TOTAL
+					</Text>
+					<Text fontWeight="bold" color={themeColors.accent}>
+						{total}
+					</Text>
+				</Box>
+			</HStack>
 
 			<Button
 				bg={themeColors.accent}
