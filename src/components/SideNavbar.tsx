@@ -30,6 +30,7 @@ import { HiOutlineUserGroup } from 'react-icons/hi'
 import { useMapStyle, MapStyleType } from '../context/MapStyleContext'
 import { AuthModal } from './AuthModal'
 import { useAuth } from '../context/AuthContext'
+import { useNavigate } from 'react-router-dom'
 
 // Custom theme colors
 const themeColors = {
@@ -315,6 +316,7 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 	const { isOpen, onOpen, onClose } = useDisclosure()
 	const { currentUser, logout } = useAuth()
 	const ref = useRef<HTMLDivElement>(null)
+	const navigate = useNavigate()
 
 	useOutsideClick({
 		ref: styleMenuRef,
@@ -339,6 +341,21 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 			logout()
 		} else {
 			onOpen()
+		}
+	}
+
+	const handleNavigation = (itemName: string) => {
+		setActiveItem(itemName)
+
+		// Navigation based on item clicked
+		switch (itemName) {
+			case 'Account':
+				navigate('/account')
+				break
+			// Add other navigation cases as needed
+			default:
+				// Default behavior, perhaps just set the active item
+				break
 		}
 	}
 
@@ -443,7 +460,7 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 							label="Account"
 							isExpanded={isExpanded}
 							isActive={activeItem === 'Account'}
-							onClick={() => setActiveItem('Account')}
+							onClick={() => handleNavigation('Account')}
 						/>
 					</>
 				)}

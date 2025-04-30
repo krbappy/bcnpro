@@ -14,6 +14,7 @@ import { NotFound } from './pages/NotFound'
 import { MapPage } from './pages/MapPage'
 import { DeliveryTest } from './pages/DeliveryTest'
 import { AuthProvider } from './context/AuthContext'
+import Account from './pages/Account'
 
 const router: Router = createBrowserRouter([
 	{
@@ -36,6 +37,10 @@ const router: Router = createBrowserRouter([
 			{
 				path: 'delivery',
 				element: <DeliveryTest />,
+			},
+			{
+				path: 'account',
+				element: <Account />,
 			},
 			{
 				path: '*',
