@@ -4,7 +4,7 @@ import React, {
 	useEffect,
 	useState,
 } from 'react'
-import { Box, useToast } from '@chakra-ui/react'
+import { Box, useToast, useDisclosure } from '@chakra-ui/react'
 import { MapComponentRef } from '../Map/MapComponent'
 
 // Import hooks
@@ -24,6 +24,7 @@ import { TimingSelection } from './components/TimingSelection'
 import { OrdersSelection } from './components/OrdersSelection'
 import { InfoForm } from './components/InfoForm'
 import { ReviewForm } from './components/ReviewForm'
+import { AddPaymentMethodModal } from '../../components/Account/PaymentMethods'
 
 // Import theme
 import { themeColors } from './theme'
@@ -140,6 +141,16 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 	const [isAuthModalOpen, setAuthModalOpen] = useState(false)
 	const { currentUser } = useAuth()
 
+	// Payment method modal state
+	const {
+		isOpen: isPaymentMethodModalOpen,
+		onOpen: onPaymentMethodModalOpen,
+		onClose: onPaymentMethodModalClose,
+	} = useDisclosure()
+	const [hasPaymentMethod, setHasPaymentMethod] = useState<boolean>(false)
+	const [isProcessingPayment, setIsProcessingPayment] =
+		useState<boolean>(false)
+
 	// Get the saved form data from the Zustand store
 	const storeData = useDeliveryFormStore((state) => ({
 		savedStops: state.stops,
@@ -186,6 +197,47 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 	useEffect(() => {
 		console.log('Form store data updated:', storeData)
 	}, [storeData])
+
+	// Fetch payment methods on component mount and when user changes
+	useEffect(() => {
+		if (currentUser) {
+			checkPaymentMethod()
+		}
+	}, [currentUser])
+
+	// Check if user has a payment method
+	const checkPaymentMethod = async () => {
+		if (!currentUser) return
+
+		try {
+			const token = await currentUser.getIdToken()
+
+			const response = await fetch(
+				`${import.meta.env.VITE_BASE_URL}/api/payments/payment-methods`,
+				{
+					method: 'GET',
+					headers: {
+						'Content-Type': 'application/json',
+						Authorization: `Bearer ${token}`,
+					},
+				},
+			)
+
+			if (!response.ok) {
+				setHasPaymentMethod(false)
+				return
+			}
+
+			const data = await response.json()
+			const methods = Array.isArray(data)
+				? data
+				: data.paymentMethods || []
+			setHasPaymentMethod(methods.length > 0)
+		} catch (error) {
+			console.error('Error checking payment methods:', error)
+			setHasPaymentMethod(false)
+		}
+	}
 
 	// Handle vehicle selection
 	const handleVehicleSelect = (vehicleType: string) => {
@@ -324,6 +376,13 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 			setAuthModalOpen(true)
 			return
 		}
+
+		// If user is logged in and on the review step, check for payment method
+		if (currentStep === 6 && currentUser && !hasPaymentMethod) {
+			onPaymentMethodModalOpen()
+			return
+		}
+
 		if (currentStep === 1) {
 			// For Step 1 (Stops), save the stops, addresses and route distance
 			nextStep({
@@ -397,11 +456,16 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 		} else if (currentStep === 6) {
 			// For Step 6 (Review), submit the booking
 			try {
+				setIsProcessingPayment(true)
 				const storeObj = useDeliveryFormStore.getState()
 				console.log('storeObj', storeObj)
+
+				// Calculate the final price
+				const totalPrice = calculatePrice()
+
 				// First, get the MongoDB user ID using Firebase UID
 				const userResponse = await fetch(
-					`${import.meta.env.VITE_BASE_URL}/api/users/${currentUser?.uid}`,
+					`${import.meta.env.VITE_BASE_URL}/api/users/${currentUser?.email}`,
 					{
 						headers: {
 							Authorization: `Bearer ${await currentUser?.getIdToken()}`,
@@ -438,6 +502,8 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 					totalWeight: storeObj.totalWeight,
 					additionalInfo: storeObj.additionalInfo,
 					contactInfo: storeObj.contactInfo,
+					totalAmount: totalPrice,
+					paymentStatus: 'pending',
 				}
 				const bookingDataWithUser = {
 					firebaseUid: currentUser?.uid,
@@ -445,7 +511,8 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 				}
 				console.log('bookingDataWithUser', bookingDataWithUser)
 
-				const response = await fetch(
+				// Create the booking first
+				const bookingResponse = await fetch(
 					`${import.meta.env.VITE_BASE_URL}/api/bookings`,
 					{
 						method: 'POST',
@@ -457,14 +524,128 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 					},
 				)
 
-				if (!response.ok) {
-					throw new Error('Failed to submit booking')
+				if (!bookingResponse.ok) {
+					throw new Error('Failed to create booking')
+				}
+
+				// Get the booking ID from the response
+				const bookingResult = await bookingResponse.json()
+				const bookingId = bookingResult.id || bookingResult._id
+
+				// Now process the payment with the booking ID
+				try {
+					const token = await currentUser?.getIdToken()
+
+					// First get the user's default payment method
+					const paymentMethodsResponse = await fetch(
+						`${import.meta.env.VITE_BASE_URL}/api/payments/payment-methods`,
+						{
+							method: 'GET',
+							headers: {
+								'Content-Type': 'application/json',
+								Authorization: `Bearer ${token}`,
+							},
+						},
+					)
+
+					if (!paymentMethodsResponse.ok) {
+						throw new Error('Failed to retrieve payment methods')
+					}
+
+					const paymentMethodsData =
+						await paymentMethodsResponse.json()
+					const methods = Array.isArray(paymentMethodsData)
+						? paymentMethodsData
+						: paymentMethodsData.paymentMethods || []
+
+					if (methods.length === 0) {
+						throw new Error('No payment methods available')
+					}
+
+					// Find default payment method or use first one
+					interface PaymentMethod {
+						id: string
+						isDefault?: boolean
+						card: {
+							brand: string
+							last4: string
+							exp_month: number
+							exp_year: number
+						}
+					}
+
+					const defaultMethod =
+						methods.find(
+							(method: PaymentMethod) => method.isDefault,
+						) || methods[0]
+
+					// Now create the payment
+					const paymentResponse = await fetch(
+						`${import.meta.env.VITE_BASE_URL}/api/payments/charge`,
+						{
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+								Authorization: `Bearer ${token}`,
+							},
+							body: JSON.stringify({
+								bookingId: bookingId,
+								paymentMethodId: defaultMethod.id,
+								amount: Math.round(totalPrice * 100), // Convert to cents for Stripe
+								currency: 'usd',
+								description: `Delivery booking - ${storeObj.vehicleType} vehicle, ${storeObj.routeDistance.toString()} miles`,
+							}),
+						},
+					)
+
+					if (!paymentResponse.ok) {
+						const errorData = await paymentResponse.json()
+						throw new Error(
+							errorData.message || 'Failed to process payment',
+						)
+					}
+
+					// Update booking payment status
+					const updateResponse = await fetch(
+						`${import.meta.env.VITE_BASE_URL}/api/bookings/${bookingId}/payment-status`,
+						{
+							method: 'PATCH',
+							headers: {
+								'Content-Type': 'application/json',
+								Authorization: `Bearer ${token}`,
+							},
+							body: JSON.stringify({ status: 'paid' }),
+						},
+					)
+
+					if (!updateResponse.ok) {
+						console.warn('Failed to update booking payment status')
+					}
+
+					const paymentData = await paymentResponse.json()
+					console.log('Payment processed:', paymentData)
+				} catch (error) {
+					console.error('Payment error:', error)
+					toast({
+						title: 'Payment Failed',
+						description:
+							error instanceof Error
+								? error.message
+								: 'Failed to process payment',
+						status: 'error',
+						duration: 5000,
+						isClosable: true,
+					})
+					setIsProcessingPayment(false)
+					return
 				}
 
 				// Reset form and show success message
 				handleResetClick()
 				toast({
 					title: 'Booking submitted successfully',
+					description:
+						'Your payment has been processed and delivery is booked.',
 					status: 'success',
 					duration: 5000,
 					isClosable: true,
@@ -481,6 +662,8 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 					duration: 5000,
 					isClosable: true,
 				})
+			} finally {
+				setIsProcessingPayment(false)
 			}
 		} else {
 			// For other steps, just navigate without saving for now
@@ -668,7 +851,9 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 					isLastStep={currentStep === 6}
 					currentStep={currentStep}
 					distance={routeDistance.displayValue}
-					isNextDisabled={isNextButtonDisabled()}
+					isNextDisabled={
+						isNextButtonDisabled() || isProcessingPayment
+					}
 					vehicle={getVehicleDisplayName()}
 					timing={getTimingDisplayName()}
 					total={getTotalPrice()}
@@ -676,6 +861,21 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 				<AuthModal
 					isOpen={isAuthModalOpen}
 					onClose={() => setAuthModalOpen(false)}
+				/>
+
+				{/* Payment Method Modal */}
+				<AddPaymentMethodModal
+					isOpen={isPaymentMethodModalOpen}
+					onClose={onPaymentMethodModalClose}
+					onSuccess={() => {
+						checkPaymentMethod()
+						// If payment method was added, continue with booking
+						setTimeout(() => {
+							if (hasPaymentMethod) {
+								handleNextClick()
+							}
+						}, 500)
+					}}
 				/>
 			</Box>
 		</Box>

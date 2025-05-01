@@ -132,6 +132,226 @@ interface PaymentMethod {
 	isDefault?: boolean
 }
 
+// Exportable function to check if a user has payment methods
+export const checkUserHasPaymentMethod = async (
+	userId: string,
+): Promise<boolean> => {
+	if (!userId) return false
+
+	try {
+		const auth = await import('../../context/AuthContext').then((m) =>
+			m.useAuth(),
+		)
+		const currentUser = auth.currentUser
+
+		if (!currentUser) return false
+
+		const token = await currentUser.getIdToken()
+
+		const response = await fetch(
+			`${BASE_URL}/api/payments/payment-methods`,
+			{
+				method: 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`,
+				},
+			},
+		)
+
+		if (!response.ok) {
+			return false
+		}
+
+		const data = await response.json()
+		const methods = Array.isArray(data) ? data : data.paymentMethods || []
+
+		return methods.length > 0
+	} catch (error) {
+		console.error('Error checking payment methods:', error)
+		return false
+	}
+}
+
+// Exportable function to charge a payment
+export const chargePayment = async (
+	amount: number,
+	description: string,
+): Promise<boolean> => {
+	const auth = await import('../../context/AuthContext').then((m) =>
+		m.useAuth(),
+	)
+	const currentUser = auth.currentUser
+
+	if (!currentUser) return false
+
+	try {
+		const token = await currentUser.getIdToken()
+
+		const response = await fetch(`${BASE_URL}/api/payments/charge`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`,
+			},
+			body: JSON.stringify({
+				amount,
+				description,
+			}),
+		})
+
+		if (!response.ok) {
+			const errorData = await response.json()
+			throw new Error(errorData.message || 'Failed to process payment')
+		}
+
+		return true
+	} catch (error) {
+		console.error('Payment processing error:', error)
+		throw error
+	}
+}
+
+// Exportable component for payment method modal
+export const AddPaymentMethodModal = ({
+	isOpen,
+	onClose,
+	onSuccess,
+}: {
+	isOpen: boolean
+	onClose: () => void
+	onSuccess?: () => void
+}) => {
+	const { currentUser } = useAuth()
+	const [setupIntent, setSetupIntent] = useState<{
+		clientSecret: string
+	} | null>(null)
+	const toast = useToast()
+
+	const createCustomer = async () => {
+		if (!currentUser) return
+
+		try {
+			const token = await currentUser.getIdToken()
+
+			const response = await fetch(
+				`${BASE_URL}/api/payments/create-customer`,
+				{
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						Authorization: `Bearer ${token}`,
+					},
+				},
+			)
+
+			if (!response.ok) {
+				throw new Error('Failed to create customer')
+			}
+
+			return await response.json()
+		} catch (error: unknown) {
+			const errorMessage =
+				error instanceof Error
+					? error.message
+					: 'Failed to create customer'
+			console.error(errorMessage)
+		}
+	}
+
+	const getSetupIntent = async () => {
+		if (!currentUser) return
+
+		try {
+			// First ensure we have a customer
+			await createCustomer()
+
+			const token = await currentUser.getIdToken()
+
+			const response = await fetch(
+				`${BASE_URL}/api/payments/setup-intent`,
+				{
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						Authorization: `Bearer ${token}`,
+					},
+				},
+			)
+
+			if (!response.ok) {
+				throw new Error('Failed to create setup intent')
+			}
+
+			const data = await response.json()
+			setSetupIntent(data)
+		} catch (error: unknown) {
+			const errorMessage =
+				error instanceof Error
+					? error.message
+					: 'Failed to initialize payment form'
+			toast({
+				title: 'Error',
+				description: errorMessage,
+				status: 'error',
+				duration: 5000,
+				isClosable: true,
+			})
+		}
+	}
+
+	const handleModalClose = () => {
+		setSetupIntent(null)
+		onClose()
+	}
+
+	const handleSuccess = () => {
+		handleModalClose()
+		if (onSuccess) {
+			setTimeout(() => {
+				onSuccess()
+			}, 300)
+		}
+	}
+
+	useEffect(() => {
+		if (isOpen && currentUser) {
+			getSetupIntent()
+		}
+	}, [isOpen, currentUser])
+
+	return (
+		<Modal isOpen={isOpen} onClose={handleModalClose} size="md">
+			<ModalOverlay />
+			<ModalContent>
+				<ModalHeader>Add Payment Method</ModalHeader>
+				<ModalCloseButton />
+				<ModalBody>
+					{setupIntent ? (
+						<Elements
+							stripe={stripePromise}
+							options={{
+								clientSecret: setupIntent.clientSecret,
+							}}
+						>
+							<AddPaymentMethodForm onSuccess={handleSuccess} />
+						</Elements>
+					) : (
+						<Flex justify="center" py={10}>
+							<Spinner size="xl" color="orange.500" />
+						</Flex>
+					)}
+				</ModalBody>
+				<ModalFooter>
+					<Button variant="ghost" onClick={handleModalClose}>
+						Cancel
+					</Button>
+				</ModalFooter>
+			</ModalContent>
+		</Modal>
+	)
+}
+
 export default function PaymentMethods() {
 	const { currentUser } = useAuth()
 	const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
@@ -187,6 +407,11 @@ export default function PaymentMethods() {
 		} finally {
 			setIsLoading(false)
 		}
+	}
+
+	const handleAddPaymentMethod = () => {
+		getSetupIntent()
+		onOpen()
 	}
 
 	const createCustomer = async () => {
@@ -260,11 +485,6 @@ export default function PaymentMethods() {
 				isClosable: true,
 			})
 		}
-	}
-
-	const handleAddPaymentMethod = () => {
-		getSetupIntent()
-		onOpen()
 	}
 
 	const handleSetDefaultPaymentMethod = async (id: string) => {
