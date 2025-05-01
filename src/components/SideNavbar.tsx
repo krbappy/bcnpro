@@ -352,6 +352,9 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 			case 'Account':
 				navigate('/account')
 				break
+			case 'Delivery history':
+				navigate('/delivery-history')
+				break
 			// Add other navigation cases as needed
 			default:
 				// Default behavior, perhaps just set the active item
@@ -445,7 +448,7 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 							label="Delivery history"
 							isExpanded={isExpanded}
 							isActive={activeItem === 'Delivery history'}
-							onClick={() => setActiveItem('Delivery history')}
+							onClick={() => handleNavigation('Delivery history')}
 						/>
 						<NavItemWithAction
 							icon={HiOutlineUserGroup}

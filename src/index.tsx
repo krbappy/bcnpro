@@ -15,6 +15,7 @@ import { MapPage } from './pages/MapPage'
 import { DeliveryTest } from './pages/DeliveryTest'
 import { AuthProvider } from './context/AuthContext'
 import Account from './pages/Account'
+import DeliveryHistory from './pages/DeliveryHistory'
 
 const router: Router = createBrowserRouter([
 	{
@@ -41,6 +42,10 @@ const router: Router = createBrowserRouter([
 			{
 				path: 'account',
 				element: <Account />,
+			},
+			{
+				path: 'delivery-history',
+				element: <DeliveryHistory />,
 			},
 			{
 				path: '*',
