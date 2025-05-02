@@ -20,41 +20,121 @@ import {
 	Spinner,
 	Center,
 	useToast,
-	Code,
-	Button,
+	Badge,
 } from '@chakra-ui/react'
-import { FiSearch, FiCalendar, FiRefreshCw } from 'react-icons/fi'
+import { FiSearch, FiCalendar } from 'react-icons/fi'
 import { useAuth } from '../context/AuthContext'
 
-// Updated interface to handle potential API response format differences
-interface Booking {
+// Define types properly to avoid 'any'
+interface ContactInfo {
+	name: string
+	phone: string
+	email: string
+	company?: string
+	notes?: string
+	saveToAddressBook?: boolean
+}
+
+interface Address {
+	street: string
+	city?: string
+	state?: string
+	zipCode?: string
+	country?: string
+	coordinates?: [number, number]
+}
+
+interface OrderItem {
+	description: string
+	length: string
+	width: string
+	height: string
+	weight: string
+	quantity: string
+}
+
+interface Order {
 	id: string
-	pickupAddress?: string
-	deliveryAddress?: string
-	status?: string
-	date?: string
-	isPaid?: boolean
-	amount?: number
-	recipientName?: string
-	// Additional possible fields
-	pickup_address?: string
-	delivery_address?: string
-	recipient_name?: string
-	is_paid?: boolean
-	created_at?: string
-	updated_at?: string
-	[key: string]: any // Allow any other fields
+	poNumber: string
+	orderNumber: string
+	bolNumber: string
+	items: OrderItem[]
+	isOpen: boolean
+}
+
+interface Booking {
+	_id: string
+	user: string
+	stops: number[]
+	selectedAddresses?: Record<string, Address>
+	vehicleType: string
+	orders: Order[]
+	totalWeight: string
+	additionalInfo?: string
+	contactInfo?: Record<string, ContactInfo>
+	currency: string
+	paymentStatus: string
+	isPaid: boolean
+	price: number
+	createdAt: string
+	updatedAt: string
+	paidAt?: string
+	orderStatus: string
+	paymentIntentId?: string
+	paymentMethodId?: string
+	routeDistance?: {
+		meters: number
+		displayValue: string
+	}
+	deliveryTiming?: {
+		date: string
+		timeWindow: string
+		isValid: boolean
+	}
+	[key: string]: unknown
+}
+
+interface BookingDisplay {
+	id: string
+	pickupAddress: string
+	deliveryAddress: string
+	recipientName: string
+	status: string
+	date: string
+	orderStatus: string
+	isPaid: boolean
+	amount: number
+	rawDate: string // Store the raw date for sorting and filtering
+}
+
+// Helper function to standardize date format for comparison
+const formatDateForComparison = (dateString: string): string => {
+	if (!dateString) return ''
+
+	try {
+		// If it's already in YYYY-MM-DD format (from the date input)
+		if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+			return dateString
+		}
+
+		const date = new Date(dateString)
+		if (isNaN(date.getTime())) return dateString
+
+		// Format as YYYY-MM-DD for comparison
+		return date.toISOString().split('T')[0]
+	} catch (e) {
+		console.error('Error formatting date:', e)
+		return dateString
+	}
 }
 
 const DeliveryHistory = () => {
-	const [bookings, setBookings] = useState<Booking[]>([])
-	const [rawData, setRawData] = useState<any>(null)
+	const [displayBookings, setDisplayBookings] = useState<BookingDisplay[]>([])
 	const [isLoading, setIsLoading] = useState(true)
 	const [searchQuery, setSearchQuery] = useState('')
 	const [dateFilter, setDateFilter] = useState('')
 	const [statusFilter, setStatusFilter] = useState('')
 	const [paymentFilter, setPaymentFilter] = useState('')
-	const [showDebug, setShowDebug] = useState(false)
 	const { currentUser } = useAuth()
 	const toast = useToast()
 
@@ -88,51 +168,44 @@ const DeliveryHistory = () => {
 
 			const data = await response.json()
 			console.log('API Response:', data)
-			setRawData(data)
 
-			// Check if data is an array or has a nested data property
-			let bookingsData: any[] = []
+			// Handle different response structures
+			let bookingsArray: Booking[] = []
 			if (Array.isArray(data)) {
-				bookingsData = data
+				bookingsArray = data
 			} else if (data && typeof data === 'object') {
-				// Try to find an array in the response
-				const possibleArrays = Object.values(data).filter(Array.isArray)
-				if (possibleArrays.length > 0) {
-					bookingsData = possibleArrays[0] as any[]
-				} else if (data.data && Array.isArray(data.data)) {
-					bookingsData = data.data
+				// Check for common response patterns
+				if (data.data && Array.isArray(data.data)) {
+					bookingsArray = data.data
 				} else if (data.bookings && Array.isArray(data.bookings)) {
-					bookingsData = data.bookings
+					bookingsArray = data.bookings
+				} else {
+					// For debugging, if it's a single booking, wrap it in an array
+					bookingsArray = [data as Booking]
 				}
 			}
 
-			// Map the data to our expected format
-			const normalizedBookings = bookingsData.map((item) => {
-				return {
-					id:
-						item.id ||
-						item._id ||
-						`booking-${Math.random().toString(36).substr(2, 9)}`,
-					pickupAddress:
-						item.pickupAddress || item.pickup_address || 'N/A',
-					deliveryAddress:
-						item.deliveryAddress || item.delivery_address || 'N/A',
-					recipientName:
-						item.recipientName || item.recipient_name || 'N/A',
-					status: item.status || 'pending',
-					date:
-						item.date ||
-						item.created_at ||
-						item.updated_at ||
-						new Date().toISOString().split('T')[0],
-					isPaid: item.isPaid || item.is_paid || false,
-					amount: item.amount || 0,
-					// Store original data
-					originalData: item,
+			// Transform bookings into display format
+			const transformed = bookingsArray.map(transformBookingForDisplay)
+
+			// Sort by date, newest first
+			const sortedBookings = [...transformed].sort((a, b) => {
+				try {
+					const dateA = new Date(a.rawDate || a.date)
+					const dateB = new Date(b.rawDate || b.date)
+
+					// If both dates are valid, sort in descending order (newest first)
+					if (!isNaN(dateA.getTime()) && !isNaN(dateB.getTime())) {
+						return dateB.getTime() - dateA.getTime()
+					}
+				} catch (e) {
+					console.error('Error sorting dates:', e)
 				}
+
+				return 0 // Keep original order if dates aren't valid
 			})
 
-			setBookings(normalizedBookings)
+			setDisplayBookings(sortedBookings)
 		} catch (error) {
 			console.error('Error fetching bookings:', error)
 			toast({
@@ -150,7 +223,64 @@ const DeliveryHistory = () => {
 		}
 	}
 
-	const filteredBookings = bookings.filter((booking) => {
+	// Transform the complex booking object into a simpler display format
+	const transformBookingForDisplay = (booking: Booking): BookingDisplay => {
+		// Get pickup and delivery addresses - add safety checks
+		let pickupAddress = 'N/A'
+		let deliveryAddress = 'N/A'
+
+		// Safely access addresses from both formats
+		if (
+			booking.selectedAddresses &&
+			typeof booking.selectedAddresses === 'object'
+		) {
+			pickupAddress =
+				booking.selectedAddresses['0']?.street || pickupAddress
+			deliveryAddress =
+				booking.selectedAddresses['1']?.street || deliveryAddress
+		}
+
+		// Get recipient name from the delivery contact info
+		let recipientName = 'N/A'
+		if (booking.contactInfo && typeof booking.contactInfo === 'object') {
+			recipientName =
+				booking.contactInfo['2']?.name ||
+				booking.contactInfo['1']?.name ||
+				recipientName
+		}
+
+		// Store raw date for sorting and filtering
+		const rawDate = booking.createdAt || ''
+
+		// Format date from createdAt for display
+		let displayDate = 'N/A'
+		try {
+			// Handle both string dates and timestamps
+			if (rawDate) {
+				displayDate = new Date(rawDate).toLocaleDateString()
+			}
+		} catch (e) {
+			console.error('Error parsing date:', e)
+		}
+
+		// Use the orderStatus field from the API response
+		const status = booking.orderStatus || 'pending'
+
+		return {
+			id: booking._id || String(Math.random()),
+			pickupAddress,
+			deliveryAddress,
+			recipientName,
+			orderStatus: status,
+			status: status,
+			date: displayDate,
+			rawDate: rawDate,
+			isPaid: Boolean(booking.isPaid),
+			amount: Number(booking.price) || 0,
+		}
+	}
+
+	const filteredBookings = displayBookings.filter((booking) => {
 		const matchesSearch =
 			String(booking.pickupAddress)
 				.toLowerCase()
@@ -162,10 +292,19 @@ const DeliveryHistory = () => {
 				.toLowerCase()
 				.includes(searchQuery.toLowerCase())
 
-		const matchesDate =
-			!dateFilter || (booking.date && booking.date.includes(dateFilter))
+		// Improved date filtering logic
+		let matchesDate = true
+		if (dateFilter) {
+			const formattedBookingDate = formatDateForComparison(
+				booking.rawDate,
+			)
+			const formattedFilterDate = formatDateForComparison(dateFilter)
+			matchesDate = formattedBookingDate === formattedFilterDate
+		}
 
-		const matchesStatus = !statusFilter || booking.status === statusFilter
+		// Use orderStatus for filtering as that's what we're displaying
+		const matchesStatus =
+			!statusFilter || booking.orderStatus === statusFilter
 
 		const matchesPayment =
 			!paymentFilter ||
@@ -193,63 +332,7 @@ const DeliveryHistory = () => {
 						<Heading size="lg" color={themeColors.secondary}>
 							Delivery History
 						</Heading>
-						<Button
-							leftIcon={<FiRefreshCw />}
-							colorScheme="orange"
-							size="sm"
-							onClick={fetchBookings}
-							isLoading={isLoading}
-							variant="outline"
-						>
-							Refresh
-						</Button>
 					</Flex>
-
-					{/* Debug panel */}
-					<Box mb={4}>
-						<Button
-							size="sm"
-							onClick={() => setShowDebug(!showDebug)}
-							variant="outline"
-							colorScheme="blue"
-							mb={2}
-						>
-							{showDebug ? 'Hide Debug Info' : 'Show Debug Info'}
-						</Button>
-
-						{showDebug && rawData && (
-							<Box
-								bg="gray.800"
-								p={3}
-								rounded="md"
-								mb={4}
-								overflowX="auto"
-							>
-								<Text mb={2} fontWeight="bold">
-									Raw API Response:
-								</Text>
-								<Code
-									colorScheme="blackAlpha"
-									whiteSpace="pre"
-									display="block"
-									overflowX="auto"
-								>
-									{JSON.stringify(rawData, null, 2)}
-								</Code>
-								<Text mt={4} mb={2} fontWeight="bold">
-									Processed Bookings:
-								</Text>
-								<Code
-									colorScheme="blackAlpha"
-									whiteSpace="pre"
-									display="block"
-									overflowX="auto"
-								>
-									{JSON.stringify(bookings, null, 2)}
-								</Code>
-							</Box>
-						)}
-					</Box>
 
 					{/* Filters */}
 					<Flex gap={4} mb={6} flexWrap="wrap">
@@ -285,6 +368,7 @@ const DeliveryHistory = () => {
 							borderColor={`${themeColors.secondary}30`}
 						>
 							<option value="pending">Pending</option>
+							<option value="processing">Processing</option>
 							<option value="in_transit">In Transit</option>
 							<option value="delivered">Delivered</option>
 							<option value="cancelled">Cancelled</option>
@@ -360,75 +444,57 @@ const DeliveryHistory = () => {
 														{booking.recipientName}
 													</Td>
 													<Td>
-														<Text
+														<Badge
 															px={2}
 															py={1}
 															rounded="md"
 															fontSize="sm"
 															fontWeight="medium"
-															bg={
-																booking.status ===
+															colorScheme={
+																booking.orderStatus ===
 																'delivered'
-																	? 'green.100'
-																	: booking.status ===
+																	? 'green'
+																	: booking.orderStatus ===
 																		  'in_transit'
-																		? 'blue.100'
-																		: booking.status ===
+																		? 'blue'
+																		: booking.orderStatus ===
 																			  'cancelled'
-																			? 'red.100'
-																			: 'yellow.100'
+																			? 'red'
+																			: 'yellow'
 															}
-															color={
-																booking.status ===
-																'delivered'
-																	? 'green.800'
-																	: booking.status ===
-																		  'in_transit'
-																		? 'blue.800'
-																		: booking.status ===
-																			  'cancelled'
-																			? 'red.800'
-																			: 'yellow.800'
-															}
-															display="inline-block"
+															textTransform="capitalize"
 														>
-															{booking.status ===
+															{booking.orderStatus ===
 															'in_transit'
 																? 'In Transit'
-																: booking.status
+																: booking.orderStatus
 																		?.charAt(
 																			0,
 																		)
 																		.toUpperCase() +
-																	(booking.status?.slice(
+																	(booking.orderStatus?.slice(
 																		1,
 																	) || '')}
-														</Text>
+														</Badge>
 													</Td>
 													<Td>${booking.amount}</Td>
 													<Td>
-														<Text
+														<Badge
 															px={2}
 															py={1}
 															rounded="md"
 															fontSize="sm"
 															fontWeight="medium"
-															bg={
+															colorScheme={
 																booking.isPaid
-																	? 'green.100'
-																	: 'red.100'
+																	? 'green'
+																	: 'red'
 															}
-															color={
-																booking.isPaid
-																	? 'green.800'
-																	: 'red.800'
-															}
-															display="inline-block"
 														>
 															{booking.isPaid
 																? 'Paid'
 																: 'Unpaid'}
-														</Text>
+														</Badge>
 													</Td>
 												</Tr>
 											))}
