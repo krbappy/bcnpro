@@ -13,7 +13,7 @@ import {
 	onAuthStateChanged,
 	GoogleAuthProvider,
 	signInWithPopup,
-	User,
+	User as FirebaseUser,
 } from 'firebase/auth'
 import { initializeApp } from 'firebase/app'
 
@@ -31,7 +31,7 @@ const app = initializeApp(firebaseConfig)
 const auth = getAuth(app)
 
 interface AuthContextType {
-	currentUser: User | null
+	currentUser: FirebaseUser | null
 	login: (email: string, password: string) => Promise<void>
 	signup: (email: string, password: string) => Promise<void>
 	logout: () => Promise<void>
@@ -51,7 +51,7 @@ export function useAuth() {
 const BASE_URL = import.meta.env.VITE_BASE_URL || 'http://localhost:5000'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-	const [currentUser, setCurrentUser] = useState<User | null>(null)
+	const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null)
 	const [loading, setLoading] = useState(true)
 
 	useEffect(() => {

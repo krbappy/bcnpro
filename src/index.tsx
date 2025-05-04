@@ -14,8 +14,11 @@ import { NotFound } from './pages/NotFound'
 import { MapPage } from './pages/MapPage'
 import { DeliveryTest } from './pages/DeliveryTest'
 import { AuthProvider } from './context/AuthContext'
+import { TeamProvider } from './context/TeamContext'
 import Account from './pages/Account'
 import DeliveryHistory from './pages/DeliveryHistory'
+import { TeamManagement } from './pages/TeamManagement'
+import { TeamInvitation } from './pages/TeamInvitation'
 
 const router: Router = createBrowserRouter([
 	{
@@ -48,6 +51,14 @@ const router: Router = createBrowserRouter([
 				element: <DeliveryHistory />,
 			},
 			{
+				path: 'team-management',
+				element: <TeamManagement />,
+			},
+			{
+				path: 'team-invitation',
+				element: <TeamInvitation />,
+			},
+			{
 				path: '*',
 				element: <NotFound />,
 			},
@@ -64,7 +75,9 @@ root.render(
 		<ChakraProvider theme={theme}>
 			<ColorModeScript />
 			<AuthProvider>
-				<RouterProvider router={router} />
+				<TeamProvider>
+					<RouterProvider router={router} />
+				</TeamProvider>
 			</AuthProvider>
 		</ChakraProvider>
 	</React.StrictMode>,

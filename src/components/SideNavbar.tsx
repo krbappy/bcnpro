@@ -29,6 +29,7 @@ import { BsLayersHalf, BsBox } from 'react-icons/bs'
 import { HiOutlineUserGroup } from 'react-icons/hi'
 import { useMapStyle, MapStyleType } from '../context/MapStyleContext'
 import { AuthModal } from './AuthModal'
+import { CreateTeamModal } from './CreateTeamModal'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
@@ -314,6 +315,11 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 	const styleMenuRef = useRef(null)
 	const { currentStyle, setMapStyle } = useMapStyle()
 	const { isOpen, onOpen, onClose } = useDisclosure()
+	const {
+		isOpen: isCreateTeamOpen,
+		onOpen: onCreateTeamOpen,
+		onClose: onCreateTeamClose,
+	} = useDisclosure()
 	const { currentUser, logout } = useAuth()
 	const ref = useRef<HTMLDivElement>(null)
 	const navigate = useNavigate()
@@ -355,11 +361,18 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 			case 'Delivery history':
 				navigate('/delivery-history')
 				break
+			case 'Teams':
+				navigate('/team-management')
+				break
 			// Add other navigation cases as needed
 			default:
 				// Default behavior, perhaps just set the active item
 				break
 		}
+	}
+
+	const handleCreateTeam = () => {
+		onCreateTeamOpen()
 	}
 
 	return (
@@ -455,8 +468,8 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 							label="Teams"
 							isExpanded={isExpanded}
 							isActive={activeItem === 'Teams'}
-							onClick={() => setActiveItem('Teams')}
-							onActionClick={() => console.log('Add new team')}
+							onClick={() => handleNavigation('Teams')}
+							onActionClick={handleCreateTeam}
 						/>
 						<NavItem
 							icon={FiUser}
@@ -656,6 +669,10 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 			</VStack>
 
 			<AuthModal isOpen={isOpen} onClose={onClose} />
+			<CreateTeamModal
+				isOpen={isCreateTeamOpen}
+				onClose={onCreateTeamClose}
+			/>
 		</Box>
 	)
 }

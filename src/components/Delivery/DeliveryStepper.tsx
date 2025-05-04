@@ -207,13 +207,13 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 
 	// Check if user has a payment method
 	const checkPaymentMethod = async () => {
-		if (!currentUser) return
+		if (!currentUser) return false
 
 		try {
 			const token = await currentUser.getIdToken()
 
 			const response = await fetch(
-				`${import.meta.env.VITE_BASE_URL}/api/payments/payment-methods`,
+				`${import.meta.env.VITE_BASE_URL}/api/payments/check-payment-method`,
 				{
 					method: 'GET',
 					headers: {
@@ -225,17 +225,37 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 
 			if (!response.ok) {
 				setHasPaymentMethod(false)
-				return
+				return false
 			}
 
 			const data = await response.json()
-			const methods = Array.isArray(data)
-				? data
-				: data.paymentMethods || []
-			setHasPaymentMethod(methods.length > 0)
+			const hasValidPayment =
+				data.hasPaymentMethod || data.teamPaymentAvailable
+			setHasPaymentMethod(hasValidPayment)
+
+			// If payment method exists, show a toast with the details
+			if (hasValidPayment) {
+				const details = data.paymentMethodDetails
+				const paymentSource =
+					details.owner === 'self'
+						? 'your'
+						: details.owner === 'team_owner'
+							? `team owner's (${details.ownerName})`
+							: `team member's (${details.ownerName})`
+
+				toast({
+					title: 'Payment Method Available',
+					description: `Using ${paymentSource} ${details.brand} card ending in ${details.last4}`,
+					status: 'info',
+					duration: 3000,
+					isClosable: true,
+				})
+			}
+			return data
 		} catch (error) {
 			console.error('Error checking payment methods:', error)
 			setHasPaymentMethod(false)
+			return false
 		}
 	}
 
@@ -378,9 +398,14 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 		}
 
 		// If user is logged in and on the review step, check for payment method
-		if (currentStep === 6 && currentUser && !hasPaymentMethod) {
-			onPaymentMethodModalOpen()
-			return
+		if (currentStep === 6 && currentUser) {
+			// Check payment method before proceeding
+			await checkPaymentMethod()
+
+			if (!hasPaymentMethod) {
+				onPaymentMethodModalOpen()
+				return
+			}
 		}
 
 		if (currentStep === 1) {
@@ -536,50 +561,17 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 				try {
 					const token = await currentUser?.getIdToken()
 
-					// First get the user's default payment method
-					const paymentMethodsResponse = await fetch(
-						`${import.meta.env.VITE_BASE_URL}/api/payments/payment-methods`,
-						{
-							method: 'GET',
-							headers: {
-								'Content-Type': 'application/json',
-								Authorization: `Bearer ${token}`,
-							},
-						},
-					)
-
-					if (!paymentMethodsResponse.ok) {
-						throw new Error('Failed to retrieve payment methods')
-					}
-
-					const paymentMethodsData =
-						await paymentMethodsResponse.json()
-					const methods = Array.isArray(paymentMethodsData)
-						? paymentMethodsData
-						: paymentMethodsData.paymentMethods || []
-
-					if (methods.length === 0) {
+					// Get payment method details
+					const paymentMethodData = await checkPaymentMethod()
+					if (
+						!paymentMethodData ||
+						(!paymentMethodData.hasPaymentMethod &&
+							!paymentMethodData.teamPaymentAvailable)
+					) {
 						throw new Error('No payment methods available')
 					}
 
-					// Find default payment method or use first one
-					interface PaymentMethod {
-						id: string
-						isDefault?: boolean
-						card: {
-							brand: string
-							last4: string
-							exp_month: number
-							exp_year: number
-						}
-					}
-
-					const defaultMethod =
-						methods.find(
-							(method: PaymentMethod) => method.isDefault,
-						) || methods[0]
-
-					// Now create the payment
+					// Now create the payment using the payment method from the check response
 					const paymentResponse = await fetch(
 						`${import.meta.env.VITE_BASE_URL}/api/payments/charge`,
 						{
@@ -590,7 +582,6 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 							},
 							body: JSON.stringify({
 								bookingId: bookingId,
-								paymentMethodId: defaultMethod.id,
 								amount: Math.round(totalPrice * 100), // Convert to cents for Stripe
 								currency: 'usd',
 								description: `Delivery booking - ${storeObj.vehicleType} vehicle, ${storeObj.routeDistance.toString()} miles`,

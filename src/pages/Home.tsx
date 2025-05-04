@@ -54,6 +54,8 @@ export const Home: FunctionComponent = (): ReactElement => {
 				>
 					<DeliveryStepper mapRef={mapRef} mapLoaded={mapLoaded} />
 				</Box>
+
+				{/* Team Invitation Alert - for logged in users */}
 			</Box>
 		</Box>
 	)
