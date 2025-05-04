@@ -19,16 +19,22 @@ export const TeamInvitation: FunctionComponent = (): ReactElement => {
 	const [searchParams] = useSearchParams()
 	const navigate = useNavigate()
 	const toast = useToast()
-	const { currentUser, login, signup, loginWithGoogle } = useAuth()
+	const { currentUser, loginWithGoogle } = useAuth()
 	const [isLoading, setIsLoading] = useState(false)
 	const [error, setError] = useState<string | null>(null)
 
 	const teamId = searchParams.get('teamId')
-	const email = searchParams.get('email')
+	const email = searchParams.get('email')?.toLowerCase()
 
 	useEffect(() => {
+		console.log('TeamInvitation mounted with:', {
+			teamId,
+			email,
+			currentUser,
+		})
+
 		if (!teamId || !email) {
-			setError('Invalid invitation link')
+			setError('Invalid invitation link. Please check the URL.')
 			return
 		}
 
@@ -37,6 +43,7 @@ export const TeamInvitation: FunctionComponent = (): ReactElement => {
 
 			try {
 				setIsLoading(true)
+				console.log('Accepting invitation for:', { teamId, email })
 				await teamService.acceptInvitation(teamId, email)
 				toast({
 					title: 'Invitation accepted successfully',
@@ -46,6 +53,7 @@ export const TeamInvitation: FunctionComponent = (): ReactElement => {
 				})
 				navigate('/team-management')
 			} catch (error) {
+				console.error('Error accepting invitation:', error)
 				const message =
 					error instanceof Error
 						? error.message
@@ -63,7 +71,7 @@ export const TeamInvitation: FunctionComponent = (): ReactElement => {
 			}
 		}
 
-		if (currentUser && currentUser.email === email) {
+		if (currentUser && currentUser.email?.toLowerCase() === email) {
 			acceptInvitation()
 		}
 	}, [currentUser, teamId, email, navigate, toast])
@@ -73,6 +81,7 @@ export const TeamInvitation: FunctionComponent = (): ReactElement => {
 			setIsLoading(true)
 			await loginWithGoogle()
 		} catch (error) {
+			console.error('Login error:', error)
 			const message =
 				error instanceof Error ? error.message : 'Failed to login'
 			toast({
@@ -92,7 +101,7 @@ export const TeamInvitation: FunctionComponent = (): ReactElement => {
 			<Container maxW="container.md" py={8}>
 				<Alert status="error">
 					<AlertIcon />
-					Invalid invitation link
+					Invalid invitation link. Please check the URL.
 				</Alert>
 			</Container>
 		)
@@ -126,8 +135,8 @@ export const TeamInvitation: FunctionComponent = (): ReactElement => {
 				<VStack spacing={6} align="stretch">
 					<Heading size="lg">Team Invitation</Heading>
 					<Text>
-						You've been invited to join a team. Please sign in or
-						create an account to accept the invitation.
+						Youve been invited to join a team. Please sign in with
+						Google to accept the invitation.
 					</Text>
 					<Box>
 						<Button
@@ -145,7 +154,7 @@ export const TeamInvitation: FunctionComponent = (): ReactElement => {
 		)
 	}
 
-	if (currentUser.email !== email) {
+	if (currentUser.email?.toLowerCase() !== email) {
 		return (
 			<Container maxW="container.md" py={8}>
 				<Alert status="warning">
