@@ -1,4 +1,4 @@
-import { FunctionComponent, useState } from 'react'
+import { FunctionComponent, useState, useEffect } from 'react'
 import {
 	VStack,
 	Heading,
@@ -9,7 +9,7 @@ import {
 	useToast,
 	Icon,
 } from '@chakra-ui/react'
-import { FiDownload, FiSend, FiSave } from 'react-icons/fi'
+import { FiDownload, FiSend } from 'react-icons/fi'
 import { useRouteStore } from '../../store/routeStore'
 
 interface FinalizeStepProps {
@@ -20,32 +20,79 @@ export const FinalizeStep: FunctionComponent<FinalizeStepProps> = ({
 	onBack,
 }) => {
 	const toast = useToast()
-	const { currentRoute, setCurrentRoute, addRoute } = useRouteStore()
+	const { currentRoute, addRoute } = useRouteStore()
 	const [isDispatching, setIsDispatching] = useState(false)
 
+	// Log final route information when component mounts or route changes
+	useEffect(() => {
+		if (currentRoute) {
+			console.log('Final Route Information:', {
+				id: currentRoute.id,
+				type: currentRoute.type,
+				stops: currentRoute.stops,
+				optimizedRoute: currentRoute.optimizedRoute,
+				driver: {
+					id: currentRoute.driver.id,
+					name: getAssignedDriver(),
+					autoAssigned: currentRoute.driver.autoAssigned,
+				},
+				status: currentRoute.status,
+			})
+		}
+	}, [currentRoute])
+
 	const handleDispatch = () => {
+		if (!currentRoute) {
+			toast({
+				title: 'No route to dispatch',
+				status: 'error',
+				duration: 3000,
+				isClosable: true,
+			})
+			return
+		}
+
 		setIsDispatching(true)
 		// Simulate API call to dispatch route
 		setTimeout(() => {
-			if (currentRoute) {
-				const dispatchedRoute = {
-					...currentRoute,
-					status: 'dispatched' as const,
-				}
-				addRoute(dispatchedRoute)
-				setCurrentRoute(null)
-				toast({
-					title: 'Route dispatched successfully',
-					status: 'success',
-					duration: 3000,
-					isClosable: true,
-				})
+			const dispatchedRoute = {
+				...currentRoute,
+				status: 'dispatched' as const,
 			}
+
+			// Log the final dispatched route
+			console.log('Dispatching Route:', dispatchedRoute)
+
+			addRoute(dispatchedRoute)
+			// setCurrentRoute(null)
+
+			toast({
+				title: 'Route dispatched successfully',
+				status: 'success',
+				duration: 3000,
+				isClosable: true,
+			})
 			setIsDispatching(false)
 		}, 1500)
 	}
 
 	const handleExportPDF = () => {
+		if (!currentRoute) {
+			toast({
+				title: 'No route to export',
+				status: 'error',
+				duration: 3000,
+				isClosable: true,
+			})
+			return
+		}
+
+		// Log export data
+		console.log('Exporting Route Data:', {
+			...currentRoute,
+			driverDetails: getAssignedDriver(),
+		})
+
 		// In a real app, this would generate and download a PDF
 		toast({
 			title: 'Exporting PDF',
@@ -66,125 +113,100 @@ export const FinalizeStep: FunctionComponent<FinalizeStepProps> = ({
 		return driver ? `${driver.name} (${driver.vehicle})` : 'Unknown driver'
 	}
 
+	if (!currentRoute) {
+		return (
+			<VStack spacing={4} align="stretch">
+				<Heading size="md" color="orange.500">
+					No Active Route
+				</Heading>
+				<Text color="gray.600">
+					There is no active route to finalize.
+				</Text>
+				<Button onClick={onBack} colorScheme="gray">
+					Go Back
+				</Button>
+			</VStack>
+		)
+	}
+
 	return (
 		<VStack spacing={6} align="stretch">
-			<Heading size="md" color="gray.800">
-				Review & Dispatch
+			<Heading size="md" color="orange.500">
+				Route Summary
 			</Heading>
 
-			<Box borderWidth={1} borderRadius="md" p={4}>
-				<VStack spacing={4} align="stretch">
+			<Box borderWidth={1} p={4} borderRadius="md">
+				<VStack align="stretch" spacing={4}>
 					<Box>
-						<Text fontWeight="medium" color="gray.600">
+						<Text fontWeight="bold" color="gray.700">
 							Route Type
 						</Text>
-						<Text color="gray.700">{currentRoute?.type}</Text>
+						<Text color="blue.600">{currentRoute.type}</Text>
 					</Box>
 
-					<Divider />
-
 					<Box>
-						<Text fontWeight="medium" color="gray.600">
-							Stops ({currentRoute?.stops.length})
+						<Text fontWeight="bold" color="gray.700">
+							Number of Stops
 						</Text>
-						<VStack spacing={2} align="stretch" mt={2}>
-							{currentRoute?.stops.map((stop, index) => (
-								<Box
-									key={index}
-									p={2}
-									bg="gray.50"
-									borderRadius="md"
-								>
-									<Text fontWeight="medium" color="gray.700">
-										{stop.name}
-									</Text>
-									<Text fontSize="sm" color="gray.600">
-										{stop.address}
-									</Text>
-									{stop.phoneNumber && (
-										<Text fontSize="sm" color="gray.600">
-											📞 {stop.phoneNumber}
-										</Text>
-									)}
-								</Box>
-							))}
-						</VStack>
-					</Box>
-
-					<Divider />
-
-					<Box>
-						<Text fontWeight="medium" color="gray.600">
-							Route Details
-						</Text>
-						<Text color="gray.700">
-							Estimated Time:{' '}
-							{currentRoute?.optimizedRoute.estimatedTime} minutes
-						</Text>
-						<Text color="gray.700">
-							Estimated Fuel Cost: $
-							{currentRoute?.optimizedRoute.fuelCost}
+						<Text color="blue.600">
+							{currentRoute.stops.length}
 						</Text>
 					</Box>
 
-					<Divider />
+					<Box>
+						<Text fontWeight="bold" color="gray.700">
+							Estimated Time
+						</Text>
+						<Text color="blue.600">
+							{currentRoute.optimizedRoute.estimatedTime} minutes
+						</Text>
+					</Box>
 
 					<Box>
-						<Text fontWeight="medium" color="gray.600">
+						<Text fontWeight="bold" color="gray.700">
+							Estimated Fuel Cost
+						</Text>
+						<Text color="green.600">
+							${currentRoute.optimizedRoute.fuelCost}
+						</Text>
+					</Box>
+
+					<Box>
+						<Text fontWeight="bold" color="gray.700">
 							Assigned Driver
 						</Text>
-						<Text color="gray.700">{getAssignedDriver()}</Text>
+						<Text color="blue.600">{getAssignedDriver()}</Text>
 					</Box>
 				</VStack>
 			</Box>
 
-			<VStack spacing={4}>
-				<Button
-					leftIcon={<Icon as={FiDownload} />}
-					variant="outline"
-					colorScheme="orange"
-					width="full"
-					onClick={handleExportPDF}
-				>
-					Export as PDF
-				</Button>
+			<Divider />
 
+			<VStack spacing={4}>
 				<Button
 					leftIcon={<Icon as={FiSend} />}
 					colorScheme="orange"
 					width="full"
 					onClick={handleDispatch}
 					isLoading={isDispatching}
-					loadingText="Dispatching..."
 				>
-					Send to Driver
+					Dispatch Route
 				</Button>
 
 				<Button
-					leftIcon={<Icon as={FiSave} />}
-					variant="ghost"
+					leftIcon={<Icon as={FiDownload} />}
+					variant="outline"
 					width="full"
-					onClick={() => {
-						if (currentRoute) {
-							addRoute(currentRoute)
-							toast({
-								title: 'Route saved to history',
-								status: 'success',
-								duration: 3000,
-								isClosable: true,
-							})
-						}
-					}}
+					onClick={handleExportPDF}
+					colorScheme="orange"
 				>
-					Save to Route History
+					Export as PDF
+				</Button>
+
+				<Button onClick={onBack} width="full">
+					Back
 				</Button>
 			</VStack>
-
-			<Divider />
-
-			<Button variant="ghost" onClick={onBack}>
-				Back
-			</Button>
 		</VStack>
 	)
 }

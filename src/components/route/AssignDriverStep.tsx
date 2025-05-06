@@ -9,7 +9,6 @@ import {
 	Radio,
 	RadioGroup,
 	Avatar,
-	useToast,
 } from '@chakra-ui/react'
 import { useRouteStore } from '../../store/routeStore'
 
@@ -29,7 +28,7 @@ export const AssignDriverStep: FunctionComponent<AssignDriverStepProps> = ({
 	onNext,
 	onBack,
 }) => {
-	const toast = useToast()
+	// const toast = useToast()
 	const { currentRoute, setCurrentRoute } = useRouteStore()
 	const [assignmentType, setAssignmentType] = useState<'auto' | 'manual'>(
 		'auto',
@@ -79,16 +78,6 @@ export const AssignDriverStep: FunctionComponent<AssignDriverStepProps> = ({
 	}
 
 	const handleNext = () => {
-		if (!currentRoute?.driver.id) {
-			toast({
-				title: 'No driver assigned',
-				description: 'Please assign a driver to continue',
-				status: 'error',
-				duration: 3000,
-				isClosable: true,
-			})
-			return
-		}
 		onNext()
 	}
 

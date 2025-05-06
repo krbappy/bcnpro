@@ -1,4 +1,4 @@
-import { FunctionComponent, useState } from 'react'
+import { FunctionComponent, useState, useEffect } from 'react'
 import {
 	VStack,
 	Heading,
@@ -15,7 +15,6 @@ import {
 } from '@chakra-ui/react'
 import { FiPlus, FiTrash2 } from 'react-icons/fi'
 import { useRouteStore, Stop } from '../../store/routeStore'
-import { themeColors } from '../Delivery/theme'
 
 interface AddStopsStepProps {
 	onNext: () => void
@@ -35,6 +34,21 @@ export const AddStopsStep: FunctionComponent<AddStopsStepProps> = ({
 		deliveryNotes: '',
 	})
 
+	// Initialize form with existing data when component mounts
+	useEffect(() => {
+		if (!currentRoute) {
+			// If no current route exists, go back to route type selection
+			toast({
+				title: 'No route selected',
+				description: 'Please select a route type first',
+				status: 'error',
+				duration: 3000,
+				isClosable: true,
+			})
+			onBack()
+		}
+	}, [currentRoute, onBack, toast])
+
 	const handleAddStop = () => {
 		if (!newStop.name || !newStop.address) {
 			toast({
@@ -48,15 +62,29 @@ export const AddStopsStep: FunctionComponent<AddStopsStepProps> = ({
 		}
 
 		if (currentRoute) {
-			setCurrentRoute({
+			const updatedRoute = {
 				...currentRoute,
 				stops: [...currentRoute.stops, { ...newStop }],
-			})
+			}
+
+			// Save to store
+			setCurrentRoute(updatedRoute)
+
+			// Reset form
 			setNewStop({
 				name: '',
 				address: '',
 				phoneNumber: '',
 				deliveryNotes: '',
+			})
+
+			// Show success message
+			toast({
+				title: 'Stop added',
+				description: `Added ${newStop.name} to the route`,
+				status: 'success',
+				duration: 2000,
+				isClosable: true,
 			})
 		}
 	}
@@ -64,10 +92,24 @@ export const AddStopsStep: FunctionComponent<AddStopsStepProps> = ({
 	const handleRemoveStop = (index: number) => {
 		if (currentRoute) {
 			const newStops = [...currentRoute.stops]
+			const removedStop = newStops[index]
 			newStops.splice(index, 1)
-			setCurrentRoute({
+
+			const updatedRoute = {
 				...currentRoute,
 				stops: newStops,
+			}
+
+			// Save to store
+			setCurrentRoute(updatedRoute)
+
+			// Show confirmation
+			toast({
+				title: 'Stop removed',
+				description: `Removed ${removedStop.name} from the route`,
+				status: 'info',
+				duration: 2000,
+				isClosable: true,
 			})
 		}
 	}
@@ -83,6 +125,38 @@ export const AddStopsStep: FunctionComponent<AddStopsStepProps> = ({
 			})
 			return
 		}
+
+		// For single stop routes, ensure there are exactly 2 stops (start and end)
+		if (
+			currentRoute.type === 'Single Stop' &&
+			currentRoute.stops.length !== 2
+		) {
+			toast({
+				title: 'Invalid number of stops',
+				description:
+					'Single stop routes must have exactly 2 stops (start and end locations)',
+				status: 'error',
+				duration: 3000,
+				isClosable: true,
+			})
+			return
+		}
+
+		// For multiple stops routes, ensure there are at least 3 stops
+		if (
+			currentRoute.type === 'Multiple Stops' &&
+			currentRoute.stops.length < 3
+		) {
+			toast({
+				title: 'More stops needed',
+				description: 'Multiple stops routes require at least 3 stops',
+				status: 'error',
+				duration: 3000,
+				isClosable: true,
+			})
+			return
+		}
+
 		onNext()
 	}
 
@@ -103,7 +177,7 @@ export const AddStopsStep: FunctionComponent<AddStopsStepProps> = ({
 				>
 					<HStack justify="space-between" align="start">
 						<VStack align="stretch" flex={1}>
-							<Text fontWeight="medium" color="gray.600">
+							<Text fontWeight="medium" color="gray.700">
 								{stop.name}
 							</Text>
 							<Text fontSize="sm" color="gray.600">
@@ -111,12 +185,12 @@ export const AddStopsStep: FunctionComponent<AddStopsStepProps> = ({
 							</Text>
 							{stop.phoneNumber && (
 								<Text fontSize="sm" color="gray.600">
-									{stop.phoneNumber}
+									📞 {stop.phoneNumber}
 								</Text>
 							)}
 							{stop.deliveryNotes && (
 								<Text fontSize="sm" color="gray.600">
-									{stop.deliveryNotes}
+									📝 {stop.deliveryNotes}
 								</Text>
 							)}
 						</VStack>
@@ -133,27 +207,21 @@ export const AddStopsStep: FunctionComponent<AddStopsStepProps> = ({
 			))}
 
 			{/* Add New Stop Form */}
-			<Box p={4} borderWidth={1} borderRadius="md" borderColor="gray.200">
+			<Box borderWidth={1} borderRadius="md" p={4}>
 				<VStack spacing={4}>
 					<FormControl isRequired>
-						<FormLabel color="gray.600">Name</FormLabel>
+						<FormLabel color="gray.600">Stop Name</FormLabel>
 						<Input
 							value={newStop.name}
 							onChange={(e) =>
 								setNewStop({ ...newStop, name: e.target.value })
 							}
 							placeholder="Enter stop name"
-							borderColor={themeColors.lightGray}
-							color={themeColors.text}
-							_focus={{
-								borderColor: themeColors.accent,
-								outline: 'none',
-								boxShadow: 'none',
-							}}
-							_active={{
-								borderColor: themeColors.accent,
-								boxShadow: 'none',
-							}}
+							color="gray.700"
+							_placeholder={{ color: 'gray.400' }}
+							borderColor="gray.300"
+							_hover={{ borderColor: 'gray.400' }}
+							_focus={{ borderColor: 'orange.500' }}
 						/>
 					</FormControl>
 
@@ -168,17 +236,11 @@ export const AddStopsStep: FunctionComponent<AddStopsStepProps> = ({
 								})
 							}
 							placeholder="Enter address"
-							borderColor={themeColors.lightGray}
-							color={themeColors.text}
-							_focus={{
-								borderColor: themeColors.accent,
-								outline: 'none',
-								boxShadow: 'none',
-							}}
-							_active={{
-								borderColor: themeColors.accent,
-								boxShadow: 'none',
-							}}
+							color="gray.700"
+							_placeholder={{ color: 'gray.400' }}
+							borderColor="gray.300"
+							_hover={{ borderColor: 'gray.400' }}
+							_focus={{ borderColor: 'orange.500' }}
 						/>
 					</FormControl>
 
@@ -193,17 +255,11 @@ export const AddStopsStep: FunctionComponent<AddStopsStepProps> = ({
 								})
 							}
 							placeholder="Enter phone number"
-							borderColor={themeColors.lightGray}
-							color={themeColors.text}
-							_focus={{
-								borderColor: themeColors.accent,
-								outline: 'none',
-								boxShadow: 'none',
-							}}
-							_active={{
-								borderColor: themeColors.accent,
-								boxShadow: 'none',
-							}}
+							color="gray.700"
+							_placeholder={{ color: 'gray.400' }}
+							borderColor="gray.300"
+							_hover={{ borderColor: 'gray.400' }}
+							_focus={{ borderColor: 'orange.500' }}
 						/>
 					</FormControl>
 
@@ -217,27 +273,20 @@ export const AddStopsStep: FunctionComponent<AddStopsStepProps> = ({
 									deliveryNotes: e.target.value,
 								})
 							}
-							placeholder="Enter any special instructions or notes"
-							borderColor={themeColors.lightGray}
-							color={themeColors.text}
-							_focus={{
-								borderColor: themeColors.accent,
-								outline: 'none',
-								boxShadow: 'none',
-							}}
-							_active={{
-								borderColor: themeColors.accent,
-								boxShadow: 'none',
-							}}
+							placeholder="Enter any delivery instructions or notes"
+							color="gray.700"
+							_placeholder={{ color: 'gray.400' }}
+							borderColor="gray.300"
+							_hover={{ borderColor: 'gray.400' }}
+							_focus={{ borderColor: 'orange.500' }}
 						/>
 					</FormControl>
 
 					<Button
 						leftIcon={<FiPlus />}
 						colorScheme="orange"
-						variant="ghost"
 						onClick={handleAddStop}
-						alignSelf="flex-start"
+						alignSelf="flex-end"
 					>
 						Add Stop
 					</Button>
@@ -245,14 +294,14 @@ export const AddStopsStep: FunctionComponent<AddStopsStepProps> = ({
 			</Box>
 
 			<HStack justify="space-between" pt={4}>
-				<Button
-					colorScheme="gray.500"
-					variant={'solid'}
-					onClick={onBack}
-				>
+				<Button onClick={onBack} colorScheme="gray.500">
 					Back
 				</Button>
-				<Button colorScheme="orange" onClick={handleNext}>
+				<Button
+					colorScheme="orange"
+					onClick={handleNext}
+					isDisabled={!currentRoute?.stops.length}
+				>
 					Next
 				</Button>
 			</HStack>
