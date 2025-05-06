@@ -364,6 +364,9 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 			case 'Teams':
 				navigate('/team-management')
 				break
+			case 'Routes':
+				navigate('/routes')
+				break
 			// Add other navigation cases as needed
 			default:
 				// Default behavior, perhaps just set the active item
@@ -450,8 +453,8 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 					label="Routes"
 					isExpanded={isExpanded}
 					isActive={activeItem === 'Routes'}
-					onClick={() => setActiveItem('Routes')}
-					onActionClick={() => console.log('Add new route')}
+					onClick={() => handleNavigation('Routes')}
+					onActionClick={() => navigate('/routes/new')}
 				/>
 
 				{currentUser && (

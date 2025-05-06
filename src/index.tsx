@@ -19,6 +19,7 @@ import Account from './pages/Account'
 import DeliveryHistory from './pages/DeliveryHistory'
 import { TeamManagement } from './pages/TeamManagement'
 import { TeamInvitation } from './pages/TeamInvitation'
+import Routes from './pages/RoutesS'
 
 const router: Router = createBrowserRouter([
 	{
@@ -57,6 +58,10 @@ const router: Router = createBrowserRouter([
 			{
 				path: 'team-invitation',
 				element: <TeamInvitation />,
+			},
+			{
+				path: 'routes',
+				element: <Routes />,
 			},
 			{
 				path: '*',
