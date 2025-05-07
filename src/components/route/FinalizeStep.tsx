@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { FunctionComponent, useState, useEffect } from 'react'
 import {
 	VStack,
@@ -63,7 +64,7 @@ export const FinalizeStep: FunctionComponent<FinalizeStepProps> = ({
 		try {
 			const token = await currentUser.getIdToken()
 			// Remove id from the route data since MongoDB will generate it
-			const { ...routeDataWithoutId } = currentRoute
+			const { id: _, ...routeDataWithoutId } = currentRoute
 
 			// Transform route type to match backend enum
 			const routeType =
@@ -75,7 +76,6 @@ export const FinalizeStep: FunctionComponent<FinalizeStepProps> = ({
 			const routeData = {
 				...routeDataWithoutId,
 				type: routeType,
-				status: 'assigned', // Using backend enum value
 				firebaseUid: currentUser.uid,
 				// Ensure stops have required fields
 				stops: currentRoute.stops.map((stop) => ({

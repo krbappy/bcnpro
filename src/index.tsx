@@ -20,6 +20,8 @@ import DeliveryHistory from './pages/DeliveryHistory'
 import { TeamManagement } from './pages/TeamManagement'
 import { TeamInvitation } from './pages/TeamInvitation'
 import Routes from './pages/RoutesS'
+import RoutesManage from './pages/RoutesManage'
+import RouteView from './pages/RouteView'
 
 const router: Router = createBrowserRouter([
 	{
@@ -62,6 +64,14 @@ const router: Router = createBrowserRouter([
 			{
 				path: 'routes',
 				element: <Routes />,
+			},
+			{
+				path: 'routes/manage',
+				element: <RoutesManage />,
+			},
+			{
+				path: 'routes/view',
+				element: <RouteView />,
 			},
 			{
 				path: '*',

@@ -32,6 +32,7 @@ import { AuthModal } from './AuthModal'
 import { CreateTeamModal } from './CreateTeamModal'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
+import { ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons'
 
 // Custom theme colors
 const themeColors = {
@@ -323,6 +324,7 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 	const { currentUser, logout } = useAuth()
 	const ref = useRef<HTMLDivElement>(null)
 	const navigate = useNavigate()
+	const [isRoutesMenuOpen, setIsRoutesMenuOpen] = useState(false)
 
 	useOutsideClick({
 		ref: styleMenuRef,
@@ -376,6 +378,21 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 
 	const handleCreateTeam = () => {
 		onCreateTeamOpen()
+	}
+
+	const handleRoutesMenuClick = () => {
+		setIsRoutesMenuOpen((prev) => !prev)
+		setActiveItem('Routes')
+	}
+
+	const handleManageRoutes = () => {
+		setActiveItem('Manage Routes')
+		navigate('/routes/manage')
+	}
+
+	const handleRequestRoute = () => {
+		setActiveItem('Request Route')
+		navigate('/routes')
 	}
 
 	return (
@@ -448,14 +465,154 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 					onClick={() => setActiveItem('Book delivery')}
 				/>
 
-				<NavItemWithAction
-					icon={FiMap}
-					label="Routes"
-					isExpanded={isExpanded}
-					isActive={activeItem === 'Routes'}
-					onClick={() => handleNavigation('Routes')}
-					onActionClick={() => navigate('/routes/new')}
-				/>
+				{/* Routes menu with submenu */}
+				<Box w="100%">
+					<Flex
+						p={3}
+						borderRadius="md"
+						bg={
+							activeItem === 'Routes'
+								? `${themeColors.accent}30`
+								: 'transparent'
+						}
+						_hover={{
+							bg:
+								activeItem === 'Routes'
+									? `${themeColors.accent}50`
+									: `${themeColors.secondary}10`,
+						}}
+						cursor="pointer"
+						w="100%"
+						align="center"
+						justifyContent="flex-start"
+						transition="all 0.2s"
+						onClick={handleRoutesMenuClick}
+					>
+						<Icon
+							as={FiMap}
+							boxSize={5}
+							color={
+								activeItem === 'Routes'
+									? themeColors.accent
+									: themeColors.secondary
+							}
+							flexShrink={0}
+						/>
+						<Box
+							ml={3}
+							width={isExpanded ? 'auto' : '0px'}
+							opacity={isExpanded ? 1 : 0}
+							overflow="hidden"
+							transition="all 0.2s"
+						>
+							<Text
+								fontSize="sm"
+								fontWeight={
+									activeItem === 'Routes'
+										? 'semibold'
+										: 'medium'
+								}
+								color={
+									activeItem === 'Routes'
+										? themeColors.accent
+										: themeColors.secondary
+								}
+								whiteSpace="nowrap"
+							>
+								Routes
+							</Text>
+						</Box>
+						<Box
+							ml="auto"
+							opacity={isExpanded ? 1 : 0}
+							transition="all 0.2s"
+						>
+							{isRoutesMenuOpen ? (
+								<ChevronUpIcon color={themeColors.secondary} />
+							) : (
+								<ChevronDownIcon
+									color={themeColors.secondary}
+								/>
+							)}
+						</Box>
+					</Flex>
+					{/* Submenu */}
+					{isRoutesMenuOpen && isExpanded && (
+						<VStack
+							align="start"
+							pl={7}
+							spacing={1}
+							mt={1}
+							borderLeft="1px solid"
+							borderColor={`${themeColors.secondary}20`}
+						>
+							<Flex
+								align="center"
+								cursor="pointer"
+								py={1}
+								px={2}
+								borderRadius="md"
+								bg={
+									activeItem === 'Manage Routes'
+										? `${themeColors.accent}30`
+										: 'transparent'
+								}
+								_hover={{ bg: `${themeColors.secondary}10` }}
+								onClick={handleManageRoutes}
+							>
+								<Icon
+									as={BsLayersHalf}
+									boxSize={4}
+									color={themeColors.secondary}
+									mr={2}
+								/>
+								<Text
+									fontWeight={
+										activeItem === 'Manage Routes'
+											? 'semibold'
+											: 'medium'
+									}
+									color={themeColors.secondary}
+									fontSize="sm"
+								>
+									Manage
+								</Text>
+							</Flex>
+							<Flex
+								align="center"
+								cursor="pointer"
+								py={1}
+								px={2}
+								borderRadius="md"
+								bg={
+									activeItem === 'Request Route'
+										? `${themeColors.accent}30`
+										: 'transparent'
+								}
+								_hover={{ bg: `${themeColors.secondary}10` }}
+								onClick={handleRequestRoute}
+							>
+								<Icon
+									as={FiUser}
+									boxSize={4}
+									color={themeColors.secondary}
+									mr={2}
+								/>
+								<Text
+									fontWeight={
+										activeItem === 'Request Route'
+											? 'semibold'
+											: 'medium'
+									}
+									color={themeColors.secondary}
+									fontSize="sm"
+								>
+									Request a route
+								</Text>
+							</Flex>
+						</VStack>
+					)}
+				</Box>
 
 				{currentUser && (
 					<>
