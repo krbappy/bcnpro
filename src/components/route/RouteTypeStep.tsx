@@ -31,6 +31,8 @@ export const RouteTypeStep: FunctionComponent<RouteTypeStepProps> = ({
 				sequence: [],
 				estimatedTime: 0,
 				fuelCost: 0,
+				distance: 0,
+				distanceDisplay: '0',
 			},
 			driver: {
 				autoAssigned: false,

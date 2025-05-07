@@ -5,6 +5,7 @@ export interface Stop {
 	address: string
 	phoneNumber: string
 	deliveryNotes: string
+	center: [number, number]
 }
 
 export interface Route {
@@ -15,6 +16,8 @@ export interface Route {
 		sequence: number[]
 		estimatedTime: number
 		fuelCost: number
+		distance: number
+		distanceDisplay: string
 	}
 	driver: {
 		id?: string

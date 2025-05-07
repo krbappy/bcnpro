@@ -8,6 +8,11 @@ import {
 	Divider,
 	useToast,
 	Icon,
+	Accordion,
+	AccordionItem,
+	AccordionButton,
+	AccordionPanel,
+	AccordionIcon,
 } from '@chakra-ui/react'
 import { FiDownload, FiSend } from 'react-icons/fi'
 import { useRouteStore } from '../../store/routeStore'
@@ -178,6 +183,76 @@ export const FinalizeStep: FunctionComponent<FinalizeStepProps> = ({
 						<Text color="blue.600">{getAssignedDriver()}</Text>
 					</Box>
 				</VStack>
+			</Box>
+
+			<Divider />
+
+			<Box>
+				<Heading size="md" color="orange.500" mb={4}>
+					Stop Details
+				</Heading>
+				<Accordion allowMultiple>
+					{currentRoute.stops.map((stop, index) => (
+						<AccordionItem key={index}>
+							<h2>
+								<AccordionButton
+									_hover={{
+										backgroundColor: 'orange.50',
+									}}
+								>
+									<Box flex="1" textAlign="left">
+										<Text
+											fontWeight="bold"
+											color="gray.700"
+										>
+											Stop {index + 1}: {stop.name}
+										</Text>
+									</Box>
+									<AccordionIcon color="orange.500" />
+								</AccordionButton>
+							</h2>
+							<AccordionPanel pb={4}>
+								<VStack align="stretch" spacing={2}>
+									<Box>
+										<Text
+											fontWeight="bold"
+											color="gray.700"
+										>
+											Address
+										</Text>
+										<Text color="blue.600">
+											{stop.address}
+										</Text>
+									</Box>
+									<Box>
+										<Text
+											fontWeight="bold"
+											color="gray.700"
+										>
+											Phone Number
+										</Text>
+										<Text color="blue.600">
+											{stop.phoneNumber}
+										</Text>
+									</Box>
+									{stop.deliveryNotes && (
+										<Box>
+											<Text
+												fontWeight="bold"
+												color="gray.700"
+											>
+												Delivery Notes
+											</Text>
+											<Text color="blue.600">
+												{stop.deliveryNotes}
+											</Text>
+										</Box>
+									)}
+								</VStack>
+							</AccordionPanel>
+						</AccordionItem>
+					))}
+				</Accordion>
 			</Box>
 
 			<Divider />

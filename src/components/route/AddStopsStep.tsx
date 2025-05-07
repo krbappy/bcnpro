@@ -15,6 +15,7 @@ import {
 } from '@chakra-ui/react'
 import { FiPlus, FiTrash2 } from 'react-icons/fi'
 import { useRouteStore, Stop } from '../../store/routeStore'
+import mapboxgl from 'mapbox-gl'
 
 interface AddStopsStepProps {
 	onNext: () => void
@@ -32,7 +33,9 @@ export const AddStopsStep: FunctionComponent<AddStopsStepProps> = ({
 		address: '',
 		phoneNumber: '',
 		deliveryNotes: '',
+		center: [0, 0], // Initialize with default coordinates
 	})
+	const [isGeocoding, setIsGeocoding] = useState(false)
 
 	// Initialize form with existing data when component mounts
 	useEffect(() => {
@@ -49,7 +52,29 @@ export const AddStopsStep: FunctionComponent<AddStopsStepProps> = ({
 		}
 	}, [currentRoute, onBack, toast])
 
-	const handleAddStop = () => {
+	const geocodeAddress = async (
+		address: string,
+	): Promise<[number, number] | null> => {
+		try {
+			const response = await fetch(
+				`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+					address,
+				)}.json?access_token=${mapboxgl.accessToken}&types=address,place,postcode&limit=1`,
+			)
+			const data = await response.json()
+
+			if (data.features && data.features.length > 0) {
+				const [lng, lat] = data.features[0].center
+				return [lng, lat]
+			}
+			return null
+		} catch (error) {
+			console.error('Error geocoding address:', error)
+			return null
+		}
+	}
+
+	const handleAddStop = async () => {
 		if (!newStop.name || !newStop.address) {
 			toast({
 				title: 'Required fields missing',
@@ -61,31 +86,63 @@ export const AddStopsStep: FunctionComponent<AddStopsStepProps> = ({
 			return
 		}
 
-		if (currentRoute) {
-			const updatedRoute = {
-				...currentRoute,
-				stops: [...currentRoute.stops, { ...newStop }],
+		setIsGeocoding(true)
+		try {
+			// Get coordinates for the address
+			const coordinates = await geocodeAddress(newStop.address)
+
+			if (!coordinates) {
+				toast({
+					title: 'Address not found',
+					description:
+						'Could not find coordinates for this address. Please check the address and try again.',
+					status: 'error',
+					duration: 3000,
+					isClosable: true,
+				})
+				return
 			}
 
-			// Save to store
-			setCurrentRoute(updatedRoute)
+			if (currentRoute) {
+				const updatedRoute = {
+					...currentRoute,
+					stops: [
+						...currentRoute.stops,
+						{ ...newStop, center: coordinates },
+					],
+				}
 
-			// Reset form
-			setNewStop({
-				name: '',
-				address: '',
-				phoneNumber: '',
-				deliveryNotes: '',
-			})
+				// Save to store
+				setCurrentRoute(updatedRoute)
 
-			// Show success message
+				// Reset form
+				setNewStop({
+					name: '',
+					address: '',
+					phoneNumber: '',
+					deliveryNotes: '',
+					center: [0, 0],
+				})
+
+				// Show success message
+				toast({
+					title: 'Stop added',
+					description: `Added ${newStop.name} to the route`,
+					status: 'success',
+					duration: 2000,
+					isClosable: true,
+				})
+			}
+		} catch (error) {
 			toast({
-				title: 'Stop added',
-				description: `Added ${newStop.name} to the route`,
-				status: 'success',
-				duration: 2000,
+				title: 'Error adding stop',
+				description: 'Failed to process the address. Please try again.',
+				status: 'error',
+				duration: 3000,
 				isClosable: true,
 			})
+		} finally {
+			setIsGeocoding(false)
 		}
 	}
 
@@ -287,6 +344,8 @@ export const AddStopsStep: FunctionComponent<AddStopsStepProps> = ({
 						colorScheme="orange"
 						onClick={handleAddStop}
 						alignSelf="flex-end"
+						isLoading={isGeocoding}
+						loadingText="Processing address..."
 					>
 						Add Stop
 					</Button>

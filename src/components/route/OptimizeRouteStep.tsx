@@ -14,7 +14,8 @@ import {
 	useToast,
 } from '@chakra-ui/react'
 import { FiArrowUp, FiArrowDown } from 'react-icons/fi'
-import { useRouteStore } from '../../store/routeStore'
+import { useRouteStore, Stop } from '../../store/routeStore'
+import mapboxgl from 'mapbox-gl'
 
 interface OptimizeRouteStepProps {
 	onNext: () => void
@@ -29,31 +30,91 @@ export const OptimizeRouteStep: FunctionComponent<OptimizeRouteStepProps> = ({
 	const { currentRoute, setCurrentRoute } = useRouteStore()
 	const [isOptimizing, setIsOptimizing] = useState(false)
 
-	const handleOptimize = () => {
+	const calculateRouteDistance = async (stops: Stop[]) => {
+		if (stops.length < 2) return null
+
+		try {
+			// Build the coordinates string for the API
+			const coordinates = stops
+				.map((stop) => `${stop.center[0]},${stop.center[1]}`)
+				.join(';')
+
+			// Construct the API request URL
+			const query = await fetch(
+				`https://api.mapbox.com/directions/v5/mapbox/driving/${coordinates}?steps=true&geometries=geojson&access_token=${mapboxgl.accessToken}`,
+				{ method: 'GET' },
+			)
+
+			const json = await query.json()
+			if (json.code === 'InvalidInput' || json.code === 'NoRoute') {
+				throw new Error(json.message || 'Error calculating route')
+			}
+
+			if (json.routes && json.routes.length > 0) {
+				const route = json.routes[0]
+				// Get the total distance in meters
+				const distanceInMeters = route.distance || 0
+				// Convert to miles with 1 decimal place
+				const distanceInMiles = (
+					distanceInMeters * 0.000621371
+				).toFixed(1)
+				return {
+					distance: distanceInMeters,
+					distanceDisplay: distanceInMiles,
+				}
+			}
+			return null
+		} catch (error) {
+			console.error('Error calculating route distance:', error)
+			return null
+		}
+	}
+
+	const handleOptimize = async () => {
 		setIsOptimizing(true)
-		// Simulate optimization calculation
-		setTimeout(() => {
+		try {
 			if (currentRoute) {
 				const optimizedSequence = [
 					...Array(currentRoute.stops.length),
 				].map((_, i) => i)
-				// In a real app, this would use a proper routing algorithm
+
+				// Calculate route distance
+				const routeInfo = await calculateRouteDistance(
+					currentRoute.stops,
+				)
+
+				// Calculate time and cost based on distance
+				const distanceInMiles = routeInfo?.distance
+					? routeInfo.distance * 0.000621371
+					: 0
+				const estimatedTime = Math.round((distanceInMiles / 30) * 60) // Time in minutes based on 30 mph average
+				const fuelCost = Math.round((distanceInMiles / 20) * 3.5) // Cost based on 20 mpg and $3.50/gallon
+
 				setCurrentRoute({
 					...currentRoute,
 					optimizedRoute: {
 						sequence: optimizedSequence,
-						estimatedTime: Math.round(
-							optimizedSequence.length * 15,
-						), // 15 mins per stop
-						fuelCost: Math.round(optimizedSequence.length * 5), // $5 per stop
+						estimatedTime: estimatedTime,
+						fuelCost: fuelCost,
+						distance: routeInfo?.distance || 0,
+						distanceDisplay: routeInfo?.distanceDisplay || '0',
 					},
 				})
 			}
+		} catch (error) {
+			toast({
+				title: 'Optimization Error',
+				description: 'Failed to calculate route distances',
+				status: 'error',
+				duration: 3000,
+				isClosable: true,
+			})
+		} finally {
 			setIsOptimizing(false)
-		}, 1500)
+		}
 	}
 
-	const moveStop = (fromIndex: number, direction: 'up' | 'down') => {
+	const moveStop = async (fromIndex: number, direction: 'up' | 'down') => {
 		if (!currentRoute) return
 
 		const toIndex = direction === 'up' ? fromIndex - 1 : fromIndex + 1
@@ -63,6 +124,9 @@ export const OptimizeRouteStep: FunctionComponent<OptimizeRouteStepProps> = ({
 		const [movedStop] = newStops.splice(fromIndex, 1)
 		newStops.splice(toIndex, 0, movedStop)
 
+		// Calculate new route distance after reordering
+		const routeInfo = await calculateRouteDistance(newStops)
+
 		setCurrentRoute({
 			...currentRoute,
 			stops: newStops,
@@ -70,6 +134,8 @@ export const OptimizeRouteStep: FunctionComponent<OptimizeRouteStepProps> = ({
 				sequence: [...Array(newStops.length)].map((_, i) => i),
 				estimatedTime: currentRoute.optimizedRoute.estimatedTime,
 				fuelCost: currentRoute.optimizedRoute.fuelCost,
+				distance: routeInfo?.distance || 0,
+				distanceDisplay: routeInfo?.distanceDisplay || '0',
 			},
 		})
 	}
@@ -151,6 +217,10 @@ export const OptimizeRouteStep: FunctionComponent<OptimizeRouteStepProps> = ({
 					<Box borderWidth={1} borderRadius="md" p={4} bg="orange.50">
 						<Text fontWeight="medium" mb={2} color="gray.600">
 							Route Summary
+						</Text>
+						<Text fontSize="sm" color="gray.600">
+							Total Distance:{' '}
+							{currentRoute.optimizedRoute.distanceDisplay} miles
 						</Text>
 						<Text fontSize="sm" color="gray.600">
 							Estimated Time:{' '}
