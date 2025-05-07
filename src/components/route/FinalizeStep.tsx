@@ -16,6 +16,7 @@ import {
 } from '@chakra-ui/react'
 import { FiDownload, FiSend } from 'react-icons/fi'
 import { useRouteStore } from '../../store/routeStore'
+import { useAuth } from '../../context/AuthContext'
 
 interface FinalizeStepProps {
 	onBack: () => void
@@ -27,12 +28,13 @@ export const FinalizeStep: FunctionComponent<FinalizeStepProps> = ({
 	const toast = useToast()
 	const { currentRoute, addRoute } = useRouteStore()
 	const [isDispatching, setIsDispatching] = useState(false)
+	const { currentUser } = useAuth()
+	const BASE_URL = import.meta.env.VITE_BASE_URL || 'http://localhost:5000'
 
 	// Log final route information when component mounts or route changes
 	useEffect(() => {
 		if (currentRoute) {
 			console.log('Final Route Information:', {
-				id: currentRoute.id,
 				type: currentRoute.type,
 				stops: currentRoute.stops,
 				optimizedRoute: currentRoute.optimizedRoute,
@@ -46,8 +48,8 @@ export const FinalizeStep: FunctionComponent<FinalizeStepProps> = ({
 		}
 	}, [currentRoute])
 
-	const handleDispatch = () => {
-		if (!currentRoute) {
+	const handleDispatch = async () => {
+		if (!currentRoute || !currentUser) {
 			toast({
 				title: 'No route to dispatch',
 				status: 'error',
@@ -58,18 +60,68 @@ export const FinalizeStep: FunctionComponent<FinalizeStepProps> = ({
 		}
 
 		setIsDispatching(true)
-		// Simulate API call to dispatch route
-		setTimeout(() => {
-			const dispatchedRoute = {
-				...currentRoute,
-				status: 'dispatched' as const,
+		try {
+			const token = await currentUser.getIdToken()
+			// Remove id from the route data since MongoDB will generate it
+			const { ...routeDataWithoutId } = currentRoute
+
+			// Transform route type to match backend enum
+			const routeType =
+				currentRoute.type === 'Single Stop'
+					? 'Single Stop'
+					: 'Multi Stop'
+
+			// Transform route data to match backend schema
+			const routeData = {
+				...routeDataWithoutId,
+				type: routeType,
+				status: 'assigned', // Using backend enum value
+				firebaseUid: currentUser.uid,
+				// Ensure stops have required fields
+				stops: currentRoute.stops.map((stop) => ({
+					name: stop.name,
+					address: stop.address,
+					phoneNumber: stop.phoneNumber || '', // Ensure required field
+					deliveryNotes: stop.deliveryNotes || '',
+					center: stop.center,
+				})),
+				// Ensure optimized route has required structure
+				optimizedRoute: {
+					sequence: currentRoute.optimizedRoute.sequence || [],
+					estimatedTime:
+						currentRoute.optimizedRoute.estimatedTime || 0,
+					fuelCost: currentRoute.optimizedRoute.fuelCost || 0,
+					distance: currentRoute.optimizedRoute.distance || 0,
+					distanceDisplay:
+						currentRoute.optimizedRoute.distanceDisplay || '0',
+				},
+				// Ensure driver has required structure
+				driver: {
+					name: getAssignedDriver().split(' (')[0] || 'Not assigned',
+					autoAssigned: currentRoute.driver.autoAssigned || false,
+				},
 			}
 
-			// Log the final dispatched route
-			console.log('Dispatching Route:', dispatchedRoute)
+			console.log('Dispatching Route:', routeData)
 
-			addRoute(dispatchedRoute)
-			// setCurrentRoute(null)
+			// Create the route in the backend
+			const response = await fetch(`${BASE_URL}/api/routes`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`,
+				},
+				body: JSON.stringify(routeData),
+			})
+
+			if (!response.ok) {
+				throw new Error('Failed to save route')
+			}
+
+			const savedRoute = await response.json()
+
+			// Update local store with the saved route
+			addRoute(savedRoute)
 
 			toast({
 				title: 'Route dispatched successfully',
@@ -77,8 +129,21 @@ export const FinalizeStep: FunctionComponent<FinalizeStepProps> = ({
 				duration: 3000,
 				isClosable: true,
 			})
+		} catch (error) {
+			console.error('Error dispatching route:', error)
+			toast({
+				title: 'Error dispatching route',
+				description:
+					error instanceof Error
+						? error.message
+						: 'Failed to dispatch route',
+				status: 'error',
+				duration: 3000,
+				isClosable: true,
+			})
+		} finally {
 			setIsDispatching(false)
-		}, 1500)
+		}
 	}
 
 	const handleExportPDF = () => {
@@ -264,6 +329,7 @@ export const FinalizeStep: FunctionComponent<FinalizeStepProps> = ({
 					width="full"
 					onClick={handleDispatch}
 					isLoading={isDispatching}
+					loadingText="Dispatching..."
 				>
 					Dispatch Route
 				</Button>
