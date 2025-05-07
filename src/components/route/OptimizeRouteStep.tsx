@@ -54,13 +54,20 @@ export const OptimizeRouteStep: FunctionComponent<OptimizeRouteStepProps> = ({
 				const route = json.routes[0]
 				// Get the total distance in meters
 				const distanceInMeters = route.distance || 0
+				// Get the total duration in seconds
+				const durationInSeconds = route.duration || 0
 				// Convert to miles with 1 decimal place
 				const distanceInMiles = (
 					distanceInMeters * 0.000621371
 				).toFixed(1)
+				// Convert duration to minutes
+				const durationInMinutes = Math.round(durationInSeconds / 60)
+
 				return {
 					distance: distanceInMeters,
 					distanceDisplay: distanceInMiles,
+					duration: durationInSeconds,
+					durationDisplay: durationInMinutes,
 				}
 			}
 			return null
@@ -78,23 +85,22 @@ export const OptimizeRouteStep: FunctionComponent<OptimizeRouteStepProps> = ({
 					...Array(currentRoute.stops.length),
 				].map((_, i) => i)
 
-				// Calculate route distance
+				// Calculate route distance and duration
 				const routeInfo = await calculateRouteDistance(
 					currentRoute.stops,
 				)
 
-				// Calculate time and cost based on distance
+				// Calculate fuel cost based on distance
 				const distanceInMiles = routeInfo?.distance
 					? routeInfo.distance * 0.000621371
 					: 0
-				const estimatedTime = Math.round((distanceInMiles / 30) * 60) // Time in minutes based on 30 mph average
 				const fuelCost = Math.round((distanceInMiles / 20) * 3.5) // Cost based on 20 mpg and $3.50/gallon
 
 				setCurrentRoute({
 					...currentRoute,
 					optimizedRoute: {
 						sequence: optimizedSequence,
-						estimatedTime: estimatedTime,
+						estimatedTime: routeInfo?.durationDisplay || 0,
 						fuelCost: fuelCost,
 						distance: routeInfo?.distance || 0,
 						distanceDisplay: routeInfo?.distanceDisplay || '0',
