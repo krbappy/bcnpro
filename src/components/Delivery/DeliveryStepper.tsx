@@ -234,23 +234,7 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 			setHasPaymentMethod(hasValidPayment)
 
 			// If payment method exists, show a toast with the details
-			if (hasValidPayment) {
-				const details = data.paymentMethodDetails
-				const paymentSource =
-					details.owner === 'self'
-						? 'your'
-						: details.owner === 'team_owner'
-							? `team owner's (${details.ownerName})`
-							: `team member's (${details.ownerName})`
 
-				toast({
-					title: 'Payment Method Available',
-					description: `Using ${paymentSource} ${details.brand} card ending in ${details.last4}`,
-					status: 'info',
-					duration: 3000,
-					isClosable: true,
-				})
-			}
 			return data
 		} catch (error) {
 			console.error('Error checking payment methods:', error)
