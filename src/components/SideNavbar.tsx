@@ -18,6 +18,7 @@ import {
 	FiHelpCircle,
 	FiPlus,
 	FiLogIn,
+	FiBook,
 } from 'react-icons/fi'
 import {
 	MdOutlineLightMode,
@@ -369,6 +370,9 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 			case 'Routes':
 				navigate('/routes')
 				break
+			case 'Address Book':
+				navigate('/address-book')
+				break
 			// Add other navigation cases as needed
 			default:
 				// Default behavior, perhaps just set the active item
@@ -630,6 +634,13 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 							isActive={activeItem === 'Teams'}
 							onClick={() => handleNavigation('Teams')}
 							onActionClick={handleCreateTeam}
+						/>
+						<NavItem
+							icon={FiBook}
+							label="Address Book"
+							isExpanded={isExpanded}
+							isActive={activeItem === 'Address Book'}
+							onClick={() => handleNavigation('Address Book')}
 						/>
 						<NavItem
 							icon={FiUser}

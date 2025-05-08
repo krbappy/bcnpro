@@ -22,6 +22,7 @@ import { TeamInvitation } from './pages/TeamInvitation'
 import Routes from './pages/RoutesS'
 import RoutesManage from './pages/RoutesManage'
 import RouteView from './pages/RouteView'
+import AddressBook from './pages/AddressBook'
 
 const router: Router = createBrowserRouter([
 	{
@@ -72,6 +73,10 @@ const router: Router = createBrowserRouter([
 			{
 				path: 'routes/view',
 				element: <RouteView />,
+			},
+			{
+				path: 'address-book',
+				element: <AddressBook />,
 			},
 			{
 				path: '*',
