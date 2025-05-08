@@ -30,7 +30,7 @@ import { useAuth } from '../context/AuthContext'
 
 export const TeamManagement: FunctionComponent = (): ReactElement => {
 	return (
-		<Box p={4}>
+		<Box p={4} w={'50%'} mx={'auto'}>
 			<CreateTeam />
 			<ManageTeamComponent />
 			<InviteTeamMemberComponent />
