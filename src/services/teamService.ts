@@ -31,7 +31,6 @@ class TeamService {
 	constructor() {
 		// Use your backend API URL from environment variables
 		this.baseUrl = `${import.meta.env.VITE_BASE_URL}/api/teams`
-		console.log('Team Service Base URL:', this.baseUrl)
 	}
 
 	private async getAuthHeaders() {

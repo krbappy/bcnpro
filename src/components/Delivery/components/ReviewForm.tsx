@@ -49,18 +49,6 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ onEditSection }) => {
 	}))
 
 	// Log all form data when component mounts
-	useEffect(() => {
-		console.log('Review Form Data:', {
-			stops: storeData.stops,
-			addresses: storeData.selectedAddresses,
-			routeDistance: storeData.routeDistance,
-			vehicleType: storeData.vehicleType,
-			deliveryTiming: storeData.deliveryTiming,
-			orders: storeData.orders,
-			totalWeight: storeData.totalWeight,
-			contactInfo: storeData.contactInfo,
-		})
-	}, [storeData])
 
 	// Vehicle data mapping for display
 	const VEHICLE_NAMES: Record<string, string> = {

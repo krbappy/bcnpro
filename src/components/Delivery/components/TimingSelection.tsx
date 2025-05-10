@@ -110,10 +110,6 @@ export const TimingSelection: React.FC<TimingSelectionProps> = ({
 	// Helper to update the Zustand store with the current timing selection
 	const updateTimingStore = useCallback(
 		(type: string, date: string = '', time: string = '') => {
-			console.log(
-				`updateTimingStore called with type=${type}, date=${date}, time=${time}`,
-			)
-
 			let timingString = type
 			let dateValue = ''
 
@@ -122,9 +118,6 @@ export const TimingSelection: React.FC<TimingSelectionProps> = ({
 				// If scheduled, we need both date and time
 				if (type === 'scheduled') {
 					const valid = Boolean(date) && Boolean(time)
-					console.log(
-						`Scheduled validity check: date=${Boolean(date)}, time=${Boolean(time)}, valid=${valid}`,
-					)
 					return valid
 				}
 				// If same-day, check availability
@@ -149,12 +142,6 @@ export const TimingSelection: React.FC<TimingSelectionProps> = ({
 				timingString = 'Same Day'
 				// No date for same day
 			}
-
-			console.log(`Calling store update with values:`, {
-				dateValue,
-				timingString,
-				isValid,
-			})
 
 			// Update the store with just the label, not the full details
 			// Only pass a date if it's the scheduled option
@@ -193,8 +180,6 @@ export const TimingSelection: React.FC<TimingSelectionProps> = ({
 	// Handle option selection
 	const handleOptionSelect = useCallback(
 		(value: string) => {
-			console.log('Selecting option:', value)
-
 			// Don't allow selecting disabled options
 			if (value === 'same-day' && !isSameDayAvailable) {
 				return

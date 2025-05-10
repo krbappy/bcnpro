@@ -167,7 +167,6 @@ const DeliveryHistory = () => {
 			}
 
 			const data = await response.json()
-			console.log('API Response:', data)
 
 			// Handle different response structures
 			let bookingsArray: Booking[] = []

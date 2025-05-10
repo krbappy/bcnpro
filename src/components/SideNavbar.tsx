@@ -19,6 +19,7 @@ import {
 	FiPlus,
 	FiLogIn,
 	FiBook,
+	FiBell,
 } from 'react-icons/fi'
 import {
 	MdOutlineLightMode,
@@ -34,6 +35,7 @@ import { CreateTeamModal } from './CreateTeamModal'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons'
+import { useNotifications } from '../context/NotificationContext'
 
 // Custom theme colors
 const themeColors = {
@@ -48,6 +50,7 @@ interface NavItemProps {
 	isExpanded: boolean
 	isActive?: boolean
 	onClick?: () => void
+	badge?: number
 }
 
 const NavItem: FunctionComponent<NavItemProps> = ({
@@ -56,6 +59,7 @@ const NavItem: FunctionComponent<NavItemProps> = ({
 	isExpanded,
 	isActive = false,
 	onClick,
+	badge,
 }): ReactElement => {
 	return (
 		<Tooltip
@@ -78,9 +82,10 @@ const NavItem: FunctionComponent<NavItemProps> = ({
 				cursor="pointer"
 				w="100%"
 				align="center"
-				justifyContent="flex-start"
+				justify="flex-start"
 				transition="all 0.2s"
 				onClick={onClick}
+				position="relative"
 			>
 				<Icon
 					as={icon}
@@ -110,6 +115,26 @@ const NavItem: FunctionComponent<NavItemProps> = ({
 						{label}
 					</Text>
 				</Box>
+				{badge && badge > 0 && (
+					<Box
+						position="absolute"
+						right={2}
+						top={2}
+						bg={themeColors.accent}
+						color="white"
+						borderRadius="full"
+						minW={3}
+						h={3}
+						display="flex"
+						alignItems="center"
+						justifyContent="center"
+						fontSize="xs"
+						fontWeight="bold"
+						px={1}
+					>
+						{badge}
+					</Box>
+				)}
 			</Flex>
 		</Tooltip>
 	)
@@ -326,6 +351,8 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 	const ref = useRef<HTMLDivElement>(null)
 	const navigate = useNavigate()
 	const [isRoutesMenuOpen, setIsRoutesMenuOpen] = useState(false)
+	const { unreadCount } = useNotifications()
+	console.log(unreadCount, 'unreadCount')
 
 	useOutsideClick({
 		ref: styleMenuRef,
@@ -372,6 +399,9 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 				break
 			case 'Address Book':
 				navigate('/address-book')
+				break
+			case 'Notifications':
+				navigate('/notifications')
 				break
 			// Add other navigation cases as needed
 			default:
@@ -620,6 +650,14 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 
 				{currentUser && (
 					<>
+						<NavItem
+							icon={FiBell}
+							label="Notifications"
+							isExpanded={isExpanded}
+							isActive={activeItem === 'Notifications'}
+							onClick={() => handleNavigation('Notifications')}
+							badge={unreadCount > 0 ? unreadCount : undefined}
+						/>
 						<NavItem
 							icon={MdHistory}
 							label="Delivery history"

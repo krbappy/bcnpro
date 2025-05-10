@@ -27,12 +27,6 @@ export const TeamInvitation: FunctionComponent = (): ReactElement => {
 	const email = searchParams.get('email')?.toLowerCase()
 
 	useEffect(() => {
-		console.log('TeamInvitation mounted with:', {
-			teamId,
-			email,
-			currentUser,
-		})
-
 		if (!teamId || !email) {
 			setError('Invalid invitation link. Please check the URL.')
 			return
@@ -43,7 +37,6 @@ export const TeamInvitation: FunctionComponent = (): ReactElement => {
 
 			try {
 				setIsLoading(true)
-				console.log('Accepting invitation for:', { teamId, email })
 				await teamService.acceptInvitation(teamId, email)
 				toast({
 					title: 'Invitation accepted successfully',

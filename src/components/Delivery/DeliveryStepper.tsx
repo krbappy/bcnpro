@@ -193,11 +193,6 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 		}
 	}, [storeData.vehicleType, storeData.deliveryTiming])
 
-	// Log the current store data whenever it changes (for debugging)
-	useEffect(() => {
-		console.log('Form store data updated:', storeData)
-	}, [storeData])
-
 	// Fetch payment methods on component mount and when user changes
 	useEffect(() => {
 		if (currentUser) {
@@ -255,8 +250,6 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 		time?: string
 		isValid?: boolean
 	}) => {
-		console.log('DeliveryStepper received timing:', timing)
-
 		// Update the individual pieces of state
 		setSelectedTimingType(timing.type)
 		setScheduledDate(timing.date || '')
@@ -467,7 +460,6 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 			try {
 				setIsProcessingPayment(true)
 				const storeObj = useDeliveryFormStore.getState()
-				console.log('storeObj', storeObj)
 
 				// Calculate the final price
 				const totalPrice = calculatePrice()
@@ -518,7 +510,6 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 					firebaseUid: currentUser?.uid,
 					...bookingData,
 				}
-				console.log('bookingDataWithUser', bookingDataWithUser)
 
 				// Create the booking first
 				const bookingResponse = await fetch(
@@ -596,9 +587,6 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 					if (!updateResponse.ok) {
 						console.warn('Failed to update booking payment status')
 					}
-
-					const paymentData = await paymentResponse.json()
-					console.log('Payment processed:', paymentData)
 				} catch (error) {
 					console.error('Payment error:', error)
 					toast({
@@ -657,10 +645,6 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 	// Check if Next button should be disabled
 	const isNextButtonDisabled = () => {
 		// For debugging
-		console.log('Current step:', currentStep)
-		console.log('Selected timing type:', selectedTimingType)
-		console.log('Scheduled date:', scheduledDate)
-		console.log('Scheduled time:', scheduledTime)
 
 		switch (currentStep) {
 			case 1:
@@ -675,11 +659,7 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 					// Both date and time are required for scheduled deliveries
 					const valid =
 						Boolean(scheduledDate) && Boolean(scheduledTime)
-					console.log('Scheduled validation check:', {
-						hasDate: Boolean(scheduledDate),
-						hasTime: Boolean(scheduledTime),
-						valid,
-					})
+
 					return !valid
 				}
 
@@ -705,7 +685,6 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 				return false
 		}
 	}
-	console.log('isNextButtonDisabled', isNextButtonDisabled())
 
 	// Render appropriate content based on current step
 	const renderStepContent = () => {

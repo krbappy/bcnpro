@@ -23,6 +23,8 @@ import Routes from './pages/RoutesS'
 import RoutesManage from './pages/RoutesManage'
 import RouteView from './pages/RouteView'
 import AddressBook from './pages/AddressBook'
+import { Notifications } from './pages/Notifications'
+import { NotificationProvider } from './context/NotificationContext'
 
 const router: Router = createBrowserRouter([
 	{
@@ -79,6 +81,10 @@ const router: Router = createBrowserRouter([
 				element: <AddressBook />,
 			},
 			{
+				path: 'notifications',
+				element: <Notifications />,
+			},
+			{
 				path: '*',
 				element: <NotFound />,
 			},
@@ -93,10 +99,12 @@ const root: Root = createRoot(container)
 root.render(
 	<React.StrictMode>
 		<ChakraProvider theme={theme}>
-			<ColorModeScript />
+			<ColorModeScript initialColorMode={theme.config.initialColorMode} />
 			<AuthProvider>
 				<TeamProvider>
-					<RouterProvider router={router} />
+					<NotificationProvider>
+						<RouterProvider router={router} />
+					</NotificationProvider>
 				</TeamProvider>
 			</AuthProvider>
 		</ChakraProvider>

@@ -51,20 +51,8 @@ const ManageTeamComponent: FunctionComponent = (): ReactElement => {
 		}
 	}, [teams, selectedTeamId])
 
-	// Debug: Log members data
-	useEffect(() => {
-		console.log('Current members:', members)
-	}, [members])
-
 	const handleRemoveMember = async (teamId: string, userId: string) => {
 		try {
-			const memberToRemove = members.find((m) => m.id === userId)
-			console.log('Removing member:', {
-				teamId,
-				userId,
-				memberEmail: memberToRemove?.email,
-				allMembers: members,
-			})
 			await removeMember(teamId, userId)
 			toast({
 				title: 'Member removed successfully',

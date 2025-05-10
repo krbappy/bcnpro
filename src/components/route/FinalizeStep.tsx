@@ -32,23 +32,6 @@ export const FinalizeStep: FunctionComponent<FinalizeStepProps> = ({
 	const { currentUser } = useAuth()
 	const BASE_URL = import.meta.env.VITE_BASE_URL || 'http://localhost:5000'
 
-	// Log final route information when component mounts or route changes
-	useEffect(() => {
-		if (currentRoute) {
-			console.log('Final Route Information:', {
-				type: currentRoute.type,
-				stops: currentRoute.stops,
-				optimizedRoute: currentRoute.optimizedRoute,
-				driver: {
-					id: currentRoute.driver.id,
-					name: getAssignedDriver(),
-					autoAssigned: currentRoute.driver.autoAssigned,
-				},
-				status: currentRoute.status,
-			})
-		}
-	}, [currentRoute])
-
 	const handleDispatch = async () => {
 		if (!currentRoute || !currentUser) {
 			toast({
@@ -102,8 +85,6 @@ export const FinalizeStep: FunctionComponent<FinalizeStepProps> = ({
 				},
 			}
 
-			console.log('Dispatching Route:', routeData)
-
 			// Create the route in the backend
 			const response = await fetch(`${BASE_URL}/api/routes`, {
 				method: 'POST',
@@ -156,12 +137,6 @@ export const FinalizeStep: FunctionComponent<FinalizeStepProps> = ({
 			})
 			return
 		}
-
-		// Log export data
-		console.log('Exporting Route Data:', {
-			...currentRoute,
-			driverDetails: getAssignedDriver(),
-		})
 
 		// In a real app, this would generate and download a PDF
 		toast({
