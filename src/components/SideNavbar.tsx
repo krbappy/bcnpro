@@ -651,14 +651,6 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 				{currentUser && (
 					<>
 						<NavItem
-							icon={FiBell}
-							label="Notifications"
-							isExpanded={isExpanded}
-							isActive={activeItem === 'Notifications'}
-							onClick={() => handleNavigation('Notifications')}
-							badge={unreadCount > 0 ? unreadCount : undefined}
-						/>
-						<NavItem
 							icon={MdHistory}
 							label="Delivery history"
 							isExpanded={isExpanded}
@@ -686,6 +678,14 @@ export const SideNavbar: FunctionComponent = (): ReactElement => {
 							isExpanded={isExpanded}
 							isActive={activeItem === 'Account'}
 							onClick={() => handleNavigation('Account')}
+						/>
+						<NavItem
+							icon={FiBell}
+							label="Notifications"
+							isExpanded={isExpanded}
+							isActive={activeItem === 'Notifications'}
+							onClick={() => handleNavigation('Notifications')}
+							badge={unreadCount > 0 ? unreadCount : undefined}
 						/>
 					</>
 				)}

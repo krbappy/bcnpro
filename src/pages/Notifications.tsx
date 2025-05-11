@@ -1,19 +1,10 @@
 import { FunctionComponent, ReactElement, useEffect } from 'react'
-import {
-	Box,
-	VStack,
-	Text,
-	Button,
-	useToast,
-	Flex,
-	Badge,
-} from '@chakra-ui/react'
+import { Box, VStack, Text, useToast, Flex, Badge } from '@chakra-ui/react'
 import { useNotifications } from '../context/NotificationContext'
 import { format } from 'date-fns'
 
 export const Notifications: FunctionComponent = (): ReactElement => {
-	const { notifications, fetchNotifications, markAsRead, markAllAsRead } =
-		useNotifications()
+	const { notifications, fetchNotifications, markAsRead } = useNotifications()
 	const toast = useToast()
 	// console.log(notifications, 'notifications')
 
@@ -21,24 +12,31 @@ export const Notifications: FunctionComponent = (): ReactElement => {
 		fetchNotifications()
 	}, [])
 
-	const handleMarkAllAsRead = async () => {
-		try {
-			await markAllAsRead()
-			toast({
-				title: 'All notifications marked as read',
-				status: 'success',
-				duration: 3000,
-				isClosable: true,
-			})
-		} catch (error) {
-			toast({
-				title: 'Failed to mark notifications as read',
-				status: 'error',
-				duration: 3000,
-				isClosable: true,
-			})
-		}
-	}
+	useEffect(() => {
+		console.log(
+			notifications.filter((n) => !n.seen),
+			'notifications',
+		)
+	}, [notifications])
+
+	// const handleMarkAllAsRead = async () => {
+	// 	try {
+	// 		await markAllAsRead()
+	// 		toast({
+	// 			title: 'All notifications marked as read',
+	// 			status: 'success',
+	// 			duration: 3000,
+	// 			isClosable: true,
+	// 		})
+	// 	} catch (error) {
+	// 		toast({
+	// 			title: 'Failed to mark notifications as read',
+	// 			status: 'error',
+	// 			duration: 3000,
+	// 			isClosable: true,
+	// 		})
+	// 	}
+	// }
 
 	const handleMarkAsRead = async (notificationId: string) => {
 		try {
@@ -59,13 +57,13 @@ export const Notifications: FunctionComponent = (): ReactElement => {
 				<Text fontSize="2xl" fontWeight="bold">
 					Notifications
 				</Text>
-				<Button
+				{/* <Button
 					colorScheme="blue"
 					onClick={handleMarkAllAsRead}
 					isDisabled={notifications.every((n) => n.seen)}
 				>
 					Mark all as read
-				</Button>
+				</Button> */}
 			</Flex>
 
 			<VStack spacing={4} align="stretch">
@@ -90,7 +88,14 @@ export const Notifications: FunctionComponent = (): ReactElement => {
 						>
 							<Flex justify="space-between" align="start">
 								<VStack align="start" spacing={1}>
-									<Text fontWeight="medium">
+									<Text
+										fontWeight="medium"
+										color={
+											notification.seen
+												? 'gray.500'
+												: 'black'
+										}
+									>
 										{notification.message}
 									</Text>
 									<Text fontSize="sm" color="gray.500">
@@ -109,6 +114,11 @@ export const Notifications: FunctionComponent = (): ReactElement => {
 												: notification.type === 'team'
 													? 'purple'
 													: 'gray'
+									}
+									bg={
+										notification.seen
+											? 'gray.500'
+											: 'blue.50'
 									}
 								>
 									{notification.type}

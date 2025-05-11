@@ -5,6 +5,7 @@ import React, {
 	useState,
 	ReactNode,
 	useRef,
+	useCallback,
 } from 'react'
 import { io, Socket } from 'socket.io-client'
 import axios from 'axios'
@@ -36,100 +37,25 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({
 }) => {
 	const [notifications, setNotifications] = useState<Notification[]>([])
 	const socketRef = useRef<Socket | null>(null)
-
-	// const [socket, setSocket] = useState<Socket | null>(null)
 	const [unreadCount, setUnreadCount] = useState(0)
-	const { currentUser } = useAuth()
-	const { userProfile } = useAuth()
-	console.log(userProfile, 'userProfile')
+	const { currentUser, userProfile, loadingAuth } = useAuth()
 
-	// Initialize socket connection and fetch notifications
-	useEffect(() => {
-		const initializeSocket = async () => {
-			if (!currentUser) {
-				setNotifications([])
-				setUnreadCount(0)
-				return
-			}
-
-			try {
-				console.log('Initializing socket connection...')
-				const token = await currentUser.getIdToken()
-				socketRef.current = io(
-					import.meta.env.VITE_BASE_URL || 'http://localhost:5000',
-					{
-						query: {
-							userId: userProfile?._id,
-						},
-						auth: {
-							token, // Now using the actual token string
-						},
-						transports: ['websocket'],
-						reconnection: true,
-						reconnectionAttempts: 5,
-						reconnectionDelay: 1000,
-					},
-				)
-
-				// Listen for new notifications
-
-				socketRef.current?.on('connect_error', (error) => {
-					console.error('Socket connection error:', error)
-				})
-
-				socketRef.current?.on('disconnect', (reason) => {
-					console.log('Socket disconnected:', reason)
-				})
-
-				socketRef.current?.on(
-					'new_notification',
-					(notification: Notification) => {
-						console.log('Received new notification:', notification)
-						// Update notifications and unread count in a single state update
-						setNotifications((prev) => {
-							const newNotifications = [notification, ...prev]
-							console.log(
-								'Updated notifications:',
-								newNotifications,
-							)
-							return newNotifications
-						})
-						setUnreadCount((prev) => {
-							const newCount = prev + 1
-							console.log('Updated unread count:', newCount)
-							return newCount
-						})
-					},
-				)
-
-				// Store socket in state for cleanup
-				// setSocket(socketRef.current)
-
-				// Initial fetch of notifications
-				await fetchNotifications()
-			} catch (error) {
-				console.error('Error initializing socket:', error)
-			}
+	const fetchNotifications = useCallback(async () => {
+		if (!currentUser || !userProfile?._id) {
+			console.log(
+				'fetchNotifications skipped: No currentUser or userProfile._id',
+				{
+					hasCurrentUser: !!currentUser,
+					hasUserProfileId: !!userProfile?._id,
+				},
+			)
+			return
 		}
-
-		initializeSocket()
-
-		return () => {
-			console.log('Cleaning up socket connection...')
-			if (socketRef.current) {
-				socketRef.current?.removeAllListeners()
-				socketRef.current?.close()
-				socketRef.current = null
-			}
-		}
-	}, [currentUser])
-
-	// Fetch historical notifications
-	const fetchNotifications = async () => {
-		if (!currentUser) return
 
 		try {
-			console.log('Fetching notifications...')
+			console.log(
+				`Fetching notifications for userProfile ID: ${userProfile._id}...`,
+			)
 			const token = await currentUser.getIdToken()
 			const response = await axios.get(
 				`${import.meta.env.VITE_BASE_URL}/api/notifications`,
@@ -139,50 +65,216 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({
 					},
 				},
 			)
-			const unreadCount = response.data.filter(
-				(n: Notification) => !n.seen,
+			const fetchedNotifications = response.data as Notification[]
+			const currentUnreadCount = fetchedNotifications.filter(
+				(n) => !n.seen,
 			).length
-			console.log('Fetched notifications:', response.data)
-			console.log('Unread count:', unreadCount)
-			setNotifications(response.data)
-			setUnreadCount(unreadCount)
+			console.log('Fetched notifications:', fetchedNotifications)
+			console.log(
+				'Calculated unread count from fetch:',
+				currentUnreadCount,
+			)
+			setNotifications(fetchedNotifications)
+			setUnreadCount(currentUnreadCount)
 		} catch (error) {
 			console.error('Error fetching notifications:', error)
 		}
-	}
+	}, [currentUser, userProfile])
 
-	// Mark notification as read
-	const markAsRead = async (notificationId: string) => {
-		if (!currentUser) return
+	useEffect(() => {
+		let localSocketInstance: Socket | null = null
 
-		try {
-			const token = await currentUser.getIdToken()
-			await axios.patch(
-				`${import.meta.env.VITE_BASE_URL}/api/notifications/${notificationId}/read`,
-				{},
-				{
-					headers: {
-						Authorization: `Bearer ${token}`,
+		const initializeSocket = async () => {
+			if (loadingAuth || !currentUser || !userProfile?._id) {
+				console.log(
+					'NotificationContext: Skipping socket initialization (auth loading, no currentUser, or no userProfile._id)',
+					{
+						loadingAuth,
+						hasCurrentUser: !!currentUser,
+						hasUserProfileId: !!userProfile?._id,
 					},
-				},
+				)
+				if (socketRef.current) {
+					console.log(
+						`NotificationContext: Cleaning up existing socket (${socketRef.current.id}) due to missing auth/user data.`,
+					)
+					socketRef.current.removeAllListeners()
+					socketRef.current.close()
+					socketRef.current = null
+				}
+				setNotifications([])
+				setUnreadCount(0)
+				return
+			}
+
+			if (
+				socketRef.current &&
+				socketRef.current.connected &&
+				socketRef.current.io.opts.query?.userId === userProfile._id
+			) {
+				console.log(
+					`NotificationContext: Socket already connected for user ${userProfile._id} (${socketRef.current.id}). Re-fetching notifications.`,
+				)
+				await fetchNotifications()
+				return
+			}
+
+			if (socketRef.current) {
+				console.log(
+					`NotificationContext: Disconnecting existing socket (${socketRef.current.id}) before creating new one.`,
+				)
+				socketRef.current.removeAllListeners()
+				socketRef.current.close()
+				socketRef.current = null
+			}
+
+			console.log(
+				`NotificationContext: Initializing new socket for userProfile ID: ${userProfile._id}`,
 			)
-			setNotifications((prev) =>
-				prev.map((notification) =>
-					notification._id === notificationId
-						? { ...notification, seen: true }
-						: notification,
-				),
-			)
-			setUnreadCount((prev) => Math.max(0, prev - 1))
-		} catch (error) {
-			console.error('Error marking notification as read:', error)
+			try {
+				const token = await currentUser.getIdToken()
+				localSocketInstance = io(
+					import.meta.env.VITE_BASE_URL || 'http://localhost:5000',
+					{
+						query: { userId: userProfile._id },
+						auth: { token },
+						transports: ['websocket'],
+						reconnection: true,
+						reconnectionAttempts: 5,
+						reconnectionDelay: 1000,
+					},
+				)
+				socketRef.current = localSocketInstance
+
+				localSocketInstance.on('connect', () => {
+					console.log(
+						`Socket connected: ${localSocketInstance?.id} for user ${userProfile._id}`,
+					)
+					fetchNotifications()
+				})
+
+				localSocketInstance.on('connect_error', (error) => {
+					console.error(
+						`Socket connection error for ${userProfile._id} (${localSocketInstance?.id || 'N/A'}):`,
+						error,
+					)
+				})
+
+				localSocketInstance.on('disconnect', (reason) => {
+					console.log(
+						`Socket disconnected: ${localSocketInstance?.id || 'N/A'}, reason: ${reason}`,
+					)
+				})
+
+				localSocketInstance.on(
+					'new_notification',
+					(notification: Notification) => {
+						console.log(
+							`[SocketID: ${localSocketInstance?.id}] Received new_notification:`,
+							notification,
+						)
+
+						if (notification.userId !== userProfile?._id) {
+							console.warn(
+								'Received notification intended for a different user:',
+								notification,
+								`Current userProfile ID: ${userProfile?._id}`,
+							)
+						}
+
+						setNotifications((prev) => {
+							if (prev.find((n) => n._id === notification._id)) {
+								console.log(
+									`[SocketID: ${localSocketInstance?.id}] Duplicate notification _id ${notification._id} received, already in state. Ignoring.`,
+								)
+								return prev
+							}
+							const newNotifications = [notification, ...prev]
+							console.log(
+								`[SocketID: ${localSocketInstance?.id}] Updated notifications list with _id ${notification._id}.`,
+							)
+							return newNotifications
+						})
+						setUnreadCount((prev) => prev + 1)
+						console.log(
+							`[SocketID: ${localSocketInstance?.id}] Incremented unread count.`,
+						)
+					},
+				)
+			} catch (error) {
+				console.error('Error initializing socket:', error)
+				if (localSocketInstance) {
+					localSocketInstance.removeAllListeners()
+					localSocketInstance.close()
+				}
+				if (socketRef.current === localSocketInstance) {
+					socketRef.current = null
+				}
+			}
 		}
-	}
 
-	// Mark all notifications as read
-	const markAllAsRead = async () => {
-		if (!currentUser) return
+		initializeSocket()
 
+		return () => {
+			if (localSocketInstance) {
+				console.log(
+					`NotificationContext: useEffect cleanup - Closing socket: ${localSocketInstance.id}`,
+				)
+				localSocketInstance.removeAllListeners()
+				localSocketInstance.close()
+				if (socketRef.current === localSocketInstance) {
+					socketRef.current = null
+				}
+			} else if (socketRef.current) {
+				console.log(
+					`NotificationContext: useEffect cleanup - Fallback: Closing socketRef.current: ${socketRef.current.id}`,
+				)
+				socketRef.current.removeAllListeners()
+				socketRef.current.close()
+				socketRef.current = null
+			}
+		}
+	}, [currentUser, userProfile, loadingAuth, fetchNotifications])
+
+	const markAsRead = useCallback(
+		async (notificationId: string) => {
+			if (!currentUser || !userProfile?._id) return
+			try {
+				const token = await currentUser.getIdToken()
+				await axios.patch(
+					`${import.meta.env.VITE_BASE_URL}/api/notifications/${notificationId}/read`,
+					{},
+					{
+						headers: {
+							Authorization: `Bearer ${token}`,
+						},
+					},
+				)
+				setNotifications((prev) =>
+					prev.map((notification) =>
+						notification._id === notificationId
+							? { ...notification, seen: true }
+							: notification,
+					),
+				)
+				setNotifications((currentNots) => {
+					const newUnread = currentNots.filter((n) => !n.seen).length
+					console.log(
+						'Recalculated unread count after markAsRead:',
+						newUnread,
+					)
+					setUnreadCount(newUnread)
+					return currentNots
+				})
+			} catch (error) {
+				console.error('Error marking notification as read:', error)
+			}
+		},
+		[currentUser, userProfile],
+	)
+
+	const markAllAsRead = useCallback(async () => {
+		if (!currentUser || !userProfile?._id) return
 		try {
 			const token = await currentUser.getIdToken()
 			await axios.patch(
@@ -198,10 +290,26 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({
 				prev.map((notification) => ({ ...notification, seen: true })),
 			)
 			setUnreadCount(0)
+			console.log(
+				'All notifications marked as read, unread count set to 0.',
+			)
 		} catch (error) {
 			console.error('Error marking all notifications as read:', error)
 		}
-	}
+	}, [currentUser, userProfile])
+
+	useEffect(() => {
+		const newUnreadCount = notifications.filter((n) => !n.seen).length
+		if (newUnreadCount !== unreadCount) {
+			console.log(
+				'Derived new unread count from notifications state change:',
+				newUnreadCount,
+				'Previous unread count:',
+				unreadCount,
+			)
+			setUnreadCount(newUnreadCount)
+		}
+	}, [notifications])
 
 	return (
 		<NotificationContext.Provider
