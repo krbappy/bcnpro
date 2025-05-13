@@ -17,32 +17,28 @@ const VEHICLES = [
 		name: 'Car',
 		description: 'Small boxes, bags, fittings, fasteners, romex',
 		maxWeight: '200 LBS MAX',
-		imagePath:
-			'https://app.curri.com/_next/static/images/car-41f084f877c022c803fdd7ab0e641127.svg',
+		imagePath: '/car.png',
 	},
 	{
 		id: 'suv',
 		name: 'SUV',
 		description: 'Boxes, tankless water heaters, electrical panels',
 		maxWeight: '800 LBS MAX',
-		imagePath:
-			'https://app.curri.com/_next/static/images/suv-aead1864b3b49019e0dfc2639b7e6e95.svg',
+		imagePath: '/suv.png',
 	},
 	{
 		id: 'cargo-van',
 		name: 'Cargo Van',
 		description: 'Pickup truck capacity enclosed for protection',
 		maxWeight: '1.5K LBS MAX',
-		imagePath:
-			'https://app.curri.com/_next/static/images/cargo-van-d604735e5e14fad831c75319532d3711.svg',
+		imagePath: '/cargo.png',
 	},
 	{
 		id: 'pickup-truck',
 		name: 'Pickup Truck',
 		description: "Pallets, 10' pipe or lumber, large boxes",
 		maxWeight: '1.5K LBS MAX',
-		imagePath:
-			'https://app.curri.com/_next/static/images/truck-0f36fc60fceb6e4c18e36ba0156dfaa3.svg',
+		imagePath: '/pickuptrack.png',
 	},
 ]
 
