@@ -9,8 +9,8 @@ export const mapStyles = {
 
 // Default map configuration
 export const defaultMapConfig = {
-	center: [-74.5, 40] as [number, number], // Default center (New York)
-	zoom: 9,
+	center: [-118.2437, 34.0522] as [number, number], // Default center (Los Angeles)
+	zoom: 12,
 	minZoom: 2,
 	maxZoom: 18,
 }
