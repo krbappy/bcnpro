@@ -29,7 +29,7 @@ interface MapStyleProviderProps {
 }
 
 export const MapStyleProvider = ({ children }: MapStyleProviderProps) => {
-	const [currentStyle, setCurrentStyle] = useState<MapStyleType>('Standard')
+	const [currentStyle, setCurrentStyle] = useState<MapStyleType>('Dark')
 
 	const setMapStyle = (style: MapStyleType) => {
 		setCurrentStyle(style)
