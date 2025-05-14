@@ -65,7 +65,12 @@ export const OrdersSelection: React.FC<OrdersSelectionProps> = ({
 	onOrdersDataChange,
 }) => {
 	// Load from zustand store
-	const vehicleType = useDeliveryFormStore((state) => state.vehicleType)
+	const vehicleType = useDeliveryFormStore((state) => {
+		if (!state.vehicleType) return null
+		return typeof state.vehicleType === 'string'
+			? state.vehicleType
+			: state.vehicleType.type
+	})
 	const storedOrders = useDeliveryFormStore((state) => state.orders)
 	const setOrdersInStore = useDeliveryFormStore((state) => state.setOrders)
 	const setTotalWeightInStore = useDeliveryFormStore(
@@ -103,24 +108,25 @@ export const OrdersSelection: React.FC<OrdersSelectionProps> = ({
 
 	// Update the parent component with current data and check capacity
 	const updateParentAndValidate = (updatedOrders: Order[]) => {
-		// Use this function after any state update to inform the parent
-		// Calculate weight with updated orders
-		const totalWeight = updatedOrders.reduce((totalOrderWeight, order) => {
-			const orderWeight = order.items.reduce((totalItemWeight, item) => {
-				const weight = parseFloat(item.weight) || 0
-				const quantity = parseInt(item.quantity) || 1
-				return totalItemWeight + weight * quantity
-			}, 0)
-			return totalOrderWeight + orderWeight
+		// Calculate total weight for all items
+		const totalWeight = updatedOrders.reduce((orderTotal, order) => {
+			return (
+				orderTotal +
+				order.items.reduce((itemTotal, item) => {
+					const weight = parseFloat(item.weight) || 0
+					const quantity = parseInt(item.quantity) || 0
+					return itemTotal + weight * quantity
+				}, 0)
+			)
 		}, 0)
 
-		// Notify parent component of changes
+		// Update the parent component
 		onOrdersDataChange({
 			totalWeight,
 			orders: updatedOrders,
 		})
 
-		// Save to zustand store
+		// Update the store
 		setOrdersInStore(updatedOrders)
 		setTotalWeightInStore(totalWeight.toString())
 

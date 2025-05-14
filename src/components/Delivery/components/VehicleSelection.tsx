@@ -1,5 +1,24 @@
-import React from 'react'
-import { Box, Grid, Text, Flex, Image } from '@chakra-ui/react'
+import React, { useState } from 'react'
+import {
+	Box,
+	Grid,
+	Text,
+	Flex,
+	Image,
+	Modal,
+	ModalOverlay,
+	ModalContent,
+	ModalHeader,
+	ModalFooter,
+	ModalBody,
+	ModalCloseButton,
+	Button,
+	FormControl,
+	FormLabel,
+	Select,
+	Checkbox,
+	VStack,
+} from '@chakra-ui/react'
 import { CheckIcon } from '@chakra-ui/icons'
 import { themeColors } from '../theme'
 
@@ -10,11 +29,21 @@ interface VehicleData {
 	description: string
 	maxWeight: string
 	imagePath: string
+	hasAdditionalQuestions?: boolean
 }
 
 interface VehicleSelectionProps {
-	onVehicleSelect: (vehicleType: string) => void
+	onVehicleSelect: (
+		vehicleType: string,
+		additionalInfo?: AdditionalVehicleInfo,
+	) => void
 	selectedVehicle: string | null
+}
+
+interface AdditionalVehicleInfo {
+	truckSize?: string
+	requiresLiftgate?: boolean
+	requiresPalletJack?: boolean
 }
 
 // Vehicle data with attributes matching the design
@@ -22,84 +51,57 @@ const VEHICLES: VehicleData[] = [
 	{
 		id: 'car',
 		name: 'Car',
-		description: 'Small boxes, bags, fittings, fasteners, romex',
+		description: 'Fast transport for lightweight tools or parts',
 		maxWeight: '200 LBS MAX',
 		imagePath: '/car.png',
 	},
 	{
 		id: 'suv',
 		name: 'SUV',
-		description: 'Boxes, tankless water heaters, electrical panels',
+		description: 'Carries multiple boxes or small equipment',
 		maxWeight: '800 LBS MAX',
 		imagePath: '/suv.png',
 	},
 	{
 		id: 'cargo-van',
 		name: 'Cargo Van',
-		description: 'Pickup truck capacity enclosed for protection',
+		description: 'Secure enclosed space for mid-size deliveries',
 		maxWeight: '1.5K LBS MAX',
 		imagePath: '/cargo.png',
 	},
 	{
 		id: 'pickup-truck',
 		name: 'Pickup Truck',
-		description: "Pallets, 10' pipe or lumber, large boxes",
+		description: 'Ideal for pipe, lumber, or oversized boxes',
 		maxWeight: '1.5K LBS MAX',
 		imagePath: '/pickuptrack.png',
 	},
-	// {
-	// 	id: 'rack-vehicle',
-	// 	name: 'Rack Vehicle',
-	// 	description: 'Lengthy pipe or lumber, rack up to 700 lbs.',
-	// 	maxWeight: '1.5K LBS MAX',
-	// 	imagePath: '/pickuptrack.png',
-	// },
 	{
 		id: 'sprinter-van',
 		name: 'Sprinter Van',
-		description: 'Pallets, large boxes, appliances',
+		description: 'Tall interior for pallets and large freight',
 		maxWeight: '4K LBS MAX',
 		imagePath: '/sprinter.png',
 	},
-	// {
-	// 	id: 'vehicle-with-hitch',
-	// 	name: 'Vehicle w/ Hitch',
-	// 	description: 'You provide the trailer or towable equipment',
-	// 	maxWeight: '10K LBS MAX',
-	// 	imagePath: '/pickuptrack.png',
-	// },
 	{
 		id: 'box-truck',
 		name: 'Box Truck',
-		description: 'Pallets, large boxes, appliances',
+		description: 'Heavy-duty delivery for large loads or appliances',
 		maxWeight: '10K LBS MAX',
 		imagePath: '/box_truck.png',
+		hasAdditionalQuestions: true,
 	},
-	// {
-	// 	id: 'box-truck-liftgate',
-	// 	name: 'BT with Liftgate',
-	// 	description: 'Includes pallet jack for easy unloading',
-	// 	maxWeight: '10K LBS MAX',
-	// 	imagePath: '/box_truck.png',
-	// },
-	// {
-	// 	id: 'open-deck',
-	// 	name: "20' Open Deck",
-	// 	description: 'Ideal for local or short haul freight services',
-	// 	maxWeight: '10K LBS MAX',
-	// 	imagePath: '/semi_truck.png',
-	// },
 	{
 		id: 'hotshot-trailer',
 		name: 'Hotshot Trailer',
-		description: "20'-40' trailer for oversized or long haul",
+		description: 'Handles long, oversized freight up to 40 feet',
 		maxWeight: '16K LBS MAX',
 		imagePath: '/hotshot.png',
 	},
 	{
 		id: 'semi-truck',
 		name: 'Semi Truck',
-		description: 'Open deck for heavy and oversized loads',
+		description: 'Maximum capacity for bulk or industrial loads',
 		maxWeight: '45K LBS MAX',
 		imagePath: '/semi_truck.png',
 	},
@@ -112,12 +114,45 @@ export const VehicleSelection: React.FC<VehicleSelectionProps> = ({
 	// Placeholder image for error fallback
 	const placeholderImage = '/vehicle-placeholder.svg'
 
+	// State for modal
+	const [isModalOpen, setIsModalOpen] = useState(false)
+	const [tempSelectedVehicle, setTempSelectedVehicle] = useState<
+		string | null
+	>(null)
+	const [additionalInfo, setAdditionalInfo] = useState<AdditionalVehicleInfo>(
+		{
+			truckSize: '16ft',
+			requiresLiftgate: false,
+			requiresPalletJack: false,
+		},
+	)
+
+	// Handle vehicle selection
+	const handleVehicleSelect = (vehicleId: string) => {
+		const vehicle = VEHICLES.find((v) => v.id === vehicleId)
+
+		if (vehicle?.hasAdditionalQuestions) {
+			setTempSelectedVehicle(vehicleId)
+			setIsModalOpen(true)
+		} else {
+			onVehicleSelect(vehicleId)
+		}
+	}
+
+	// Handle modal submission
+	const handleModalSubmit = () => {
+		if (tempSelectedVehicle) {
+			onVehicleSelect(tempSelectedVehicle, additionalInfo)
+			setIsModalOpen(false)
+		}
+	}
+
 	return (
 		<Box mb={8}>
 			<Grid
 				templateColumns={{
 					base: 'repeat(2, 1fr)',
-					md: 'repeat(3, 1fr)',
+					md: 'repeat(2, 1fr)',
 				}}
 				gap="19px"
 			>
@@ -134,7 +169,7 @@ export const VehicleSelection: React.FC<VehicleSelectionProps> = ({
 						p={4}
 						position="relative"
 						cursor="pointer"
-						onClick={() => onVehicleSelect(vehicle.id)}
+						onClick={() => handleVehicleSelect(vehicle.id)}
 						tabIndex={0}
 						_hover={{
 							borderColor: themeColors.accent + '80',
@@ -158,8 +193,6 @@ export const VehicleSelection: React.FC<VehicleSelectionProps> = ({
 								<CheckIcon color="white" w={3} h={3} />
 							</Flex>
 						)}
-
-						{/* "View Price" button - display only, non-functional */}
 
 						{/* Vehicle image */}
 						<Image
@@ -212,6 +245,82 @@ export const VehicleSelection: React.FC<VehicleSelectionProps> = ({
 					</Box>
 				))}
 			</Grid>
+
+			{/* Additional Questions Modal */}
+			<Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+				<ModalOverlay />
+				<ModalContent>
+					<ModalHeader>Additional Information Needed</ModalHeader>
+					<ModalCloseButton />
+					<ModalBody>
+						<VStack spacing={4} align="stretch">
+							<FormControl>
+								<FormLabel>Choose Truck Size</FormLabel>
+								<Select
+									value={additionalInfo.truckSize}
+									onChange={(e) =>
+										setAdditionalInfo({
+											...additionalInfo,
+											truckSize: e.target.value,
+										})
+									}
+								>
+									<option value="16ft">16ft Box Truck</option>
+									<option value="24ft">24ft Box Truck</option>
+									<option value="26ft">26ft Box Truck</option>
+								</Select>
+							</FormControl>
+
+							<FormControl>
+								<Checkbox
+									isChecked={additionalInfo.requiresLiftgate}
+									onChange={(e) =>
+										setAdditionalInfo({
+											...additionalInfo,
+											requiresLiftgate: e.target.checked,
+										})
+									}
+								>
+									Requires liftgate
+								</Checkbox>
+							</FormControl>
+
+							<FormControl>
+								<Checkbox
+									isChecked={
+										additionalInfo.requiresPalletJack
+									}
+									onChange={(e) =>
+										setAdditionalInfo({
+											...additionalInfo,
+											requiresPalletJack:
+												e.target.checked,
+										})
+									}
+								>
+									Requires pallet jack
+								</Checkbox>
+							</FormControl>
+						</VStack>
+					</ModalBody>
+
+					<ModalFooter>
+						<Button
+							colorScheme="blue"
+							mr={3}
+							onClick={handleModalSubmit}
+						>
+							Confirm Selection
+						</Button>
+						<Button
+							variant="ghost"
+							onClick={() => setIsModalOpen(false)}
+						>
+							Cancel
+						</Button>
+					</ModalFooter>
+				</ModalContent>
+			</Modal>
 		</Box>
 	)
 }

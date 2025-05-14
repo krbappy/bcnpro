@@ -58,8 +58,9 @@ export const TimingSelection: React.FC<TimingSelectionProps> = ({
 	const [validationError, setValidationError] = useState<string>('')
 
 	// Get the selected vehicle type from the store
-	const vehicleType =
-		useDeliveryFormStore((state) => state.vehicleType) || 'car'
+	const vehicleType = useDeliveryFormStore((state) => state.vehicleType) || {
+		type: 'car',
+	}
 
 	// Get the setDeliveryTiming action from the store
 	const setDeliveryTiming = useDeliveryFormStore(
@@ -87,11 +88,13 @@ export const TimingSelection: React.FC<TimingSelectionProps> = ({
 			: DEFAULT_BASE_PRICE
 
 		// Get vehicle-specific price from env or use default
-		const vehiclePriceKey = `VITE_VEHICLE_PRICE_${vehicleType.toUpperCase().replace(/-/g, '_')}`
+		const vehicleTypeKey =
+			typeof vehicleType === 'string' ? vehicleType : vehicleType.type
+		const vehiclePriceKey = `VITE_VEHICLE_PRICE_${vehicleTypeKey.toUpperCase().replace(/-/g, '_')}`
 		const vehiclePrice = import.meta.env[vehiclePriceKey]
 			? parseFloat(import.meta.env[vehiclePriceKey] as string)
 			: DEFAULT_VEHICLE_PRICES[
-					vehicleType as keyof typeof DEFAULT_VEHICLE_PRICES
+					vehicleTypeKey as keyof typeof DEFAULT_VEHICLE_PRICES
 				] || 1
 
 		// Extract distance in miles
@@ -273,11 +276,11 @@ export const TimingSelection: React.FC<TimingSelectionProps> = ({
 		const basePerMile = import.meta.env.VITE_BASE_PRICE
 			? parseFloat(import.meta.env.VITE_BASE_PRICE as string)
 			: DEFAULT_BASE_PRICE
-		const vehiclePriceKey = `VITE_VEHICLE_PRICE_${vehicleType.toUpperCase().replace(/-/g, '_')}`
+		const vehiclePriceKey = `VITE_VEHICLE_PRICE_${vehicleType.type.toUpperCase().replace(/-/g, '_')}`
 		const vehiclePrice = import.meta.env[vehiclePriceKey]
 			? parseFloat(import.meta.env[vehiclePriceKey] as string)
 			: DEFAULT_VEHICLE_PRICES[
-					vehicleType as keyof typeof DEFAULT_VEHICLE_PRICES
+					vehicleType.type as keyof typeof DEFAULT_VEHICLE_PRICES
 				] || 1
 
 		return (
@@ -330,7 +333,7 @@ export const TimingSelection: React.FC<TimingSelectionProps> = ({
 
 							<Text color={themeColors.gray} fontSize="xs" mt={1}>
 								${basePerMile}/mi × {distanceInMiles} mi + $
-								{vehiclePrice} ({vehicleType})
+								{vehiclePrice} ({vehicleType.type})
 							</Text>
 						</VStack>
 					</HStack>
@@ -359,11 +362,11 @@ export const TimingSelection: React.FC<TimingSelectionProps> = ({
 		const basePerMile = import.meta.env.VITE_BASE_PRICE
 			? parseFloat(import.meta.env.VITE_BASE_PRICE as string)
 			: DEFAULT_BASE_PRICE
-		const vehiclePriceKey = `VITE_VEHICLE_PRICE_${vehicleType.toUpperCase().replace(/-/g, '_')}`
+		const vehiclePriceKey = `VITE_VEHICLE_PRICE_${vehicleType.type.toUpperCase().replace(/-/g, '_')}`
 		const vehiclePrice = import.meta.env[vehiclePriceKey]
 			? parseFloat(import.meta.env[vehiclePriceKey] as string)
 			: DEFAULT_VEHICLE_PRICES[
-					vehicleType as keyof typeof DEFAULT_VEHICLE_PRICES
+					vehicleType.type as keyof typeof DEFAULT_VEHICLE_PRICES
 				] || 1
 
 		return (
@@ -464,11 +467,11 @@ export const TimingSelection: React.FC<TimingSelectionProps> = ({
 		const basePerMile = import.meta.env.VITE_BASE_PRICE
 			? parseFloat(import.meta.env.VITE_BASE_PRICE as string)
 			: DEFAULT_BASE_PRICE
-		const vehiclePriceKey = `VITE_VEHICLE_PRICE_${vehicleType.toUpperCase().replace(/-/g, '_')}`
+		const vehiclePriceKey = `VITE_VEHICLE_PRICE_${vehicleType.type.toUpperCase().replace(/-/g, '_')}`
 		const vehiclePrice = import.meta.env[vehiclePriceKey]
 			? parseFloat(import.meta.env[vehiclePriceKey] as string)
 			: DEFAULT_VEHICLE_PRICES[
-					vehicleType as keyof typeof DEFAULT_VEHICLE_PRICES
+					vehicleType.type as keyof typeof DEFAULT_VEHICLE_PRICES
 				] || 1
 
 		return (
@@ -510,7 +513,7 @@ export const TimingSelection: React.FC<TimingSelectionProps> = ({
 
 							<Text color={themeColors.gray} fontSize="xs" mt={1}>
 								${basePerMile}/mi × {distanceInMiles} mi + $
-								{vehiclePrice} ({vehicleType})
+								{vehiclePrice} ({vehicleType.type})
 							</Text>
 						</VStack>
 					</HStack>

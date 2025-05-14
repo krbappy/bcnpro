@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React from 'react'
 import {
 	Box,
 	Text,
@@ -68,7 +68,45 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ onEditSection }) => {
 
 	const getVehicleDisplayName = (): string => {
 		if (!storeData.vehicleType) return '-'
-		return VEHICLE_NAMES[storeData.vehicleType] || storeData.vehicleType
+
+		// Handle the vehicleType as an object
+		if (typeof storeData.vehicleType === 'object') {
+			const vehicleKey = storeData.vehicleType.type
+
+			// If we have additional info, add it to the display name
+			if (storeData.vehicleType.additionalInfo) {
+				try {
+					const additionalInfo = JSON.parse(
+						storeData.vehicleType.additionalInfo,
+					)
+					const vehicleName = VEHICLE_NAMES[vehicleKey] || vehicleKey
+
+					const parts = []
+					if (additionalInfo.truckSize)
+						parts.push(additionalInfo.truckSize)
+					if (additionalInfo.requiresLiftgate) parts.push('Liftgate')
+					if (additionalInfo.requiresPalletJack)
+						parts.push('Pallet Jack')
+
+					if (parts.length > 0) {
+						return `${vehicleName} (${parts.join(', ')})`
+					}
+
+					return vehicleName
+				} catch (e) {
+					// If parsing fails, just return the name
+					return VEHICLE_NAMES[vehicleKey] || vehicleKey
+				}
+			}
+
+			return VEHICLE_NAMES[vehicleKey] || vehicleKey
+		}
+
+		// Handle legacy string type for backward compatibility
+		return (
+			VEHICLE_NAMES[storeData.vehicleType as string] ||
+			(storeData.vehicleType as string)
+		)
 	}
 
 	// Calculate the total number of items

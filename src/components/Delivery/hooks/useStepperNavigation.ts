@@ -17,7 +17,10 @@ interface StopsData {
 }
 
 interface VehicleData {
-	vehicleType: string
+	vehicleType: {
+		type: string
+		additionalInfo?: string
+	}
 }
 
 interface TimingData {

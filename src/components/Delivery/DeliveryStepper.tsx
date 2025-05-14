@@ -84,6 +84,13 @@ const VEHICLE_NAMES: Record<string, string> = {
 	flatbed: "48'-53' Flatbed",
 }
 
+// Define the missing interface
+interface AdditionalVehicleInfo {
+	truckSize?: string
+	requiresLiftgate?: boolean
+	requiresPalletJack?: boolean
+}
+
 export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 	mapRef,
 	mapLoaded,
@@ -116,7 +123,10 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 	} = useAddressSelection(mapRef, mapLoaded)
 
 	// State for vehicle selection
-	const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null)
+	const [selectedVehicle, setSelectedVehicle] = useState<{
+		type: string
+		additionalInfo?: string
+	} | null>(null)
 
 	// State for timing selection
 	const [selectedTiming, setSelectedTiming] = useState<{
@@ -239,8 +249,16 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 	}
 
 	// Handle vehicle selection
-	const handleVehicleSelect = (vehicleType: string) => {
-		setSelectedVehicle(vehicleType)
+	const handleVehicleSelect = (
+		vehicleType: string,
+		additionalInfo?: AdditionalVehicleInfo,
+	) => {
+		setSelectedVehicle({
+			type: vehicleType,
+			additionalInfo: additionalInfo
+				? JSON.stringify(additionalInfo)
+				: undefined,
+		})
 	}
 
 	// Handle timing selection
@@ -267,7 +285,10 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 	// Get the display name for the selected vehicle
 	const getVehicleDisplayName = (): string => {
 		if (!selectedVehicle) return '-'
-		return VEHICLE_NAMES[selectedVehicle] || selectedVehicle
+
+		// Just show the basic vehicle type without additional info
+		const vehicleType = selectedVehicle.type
+		return VEHICLE_NAMES[vehicleType] || vehicleType
 	}
 
 	// Get the display name for the selected timing
@@ -299,18 +320,20 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 			: 5 // Default base price
 
 		// Get vehicle-specific price from env
-		const vehicleType = selectedVehicle || 'car'
+		const vehicleType = selectedVehicle?.type || 'car'
 		const vehiclePriceKey = `VITE_VEHICLE_PRICE_${vehicleType.toUpperCase().replace(/-/g, '_')}`
-		const vehiclePrice = import.meta.env[vehiclePriceKey]
-			? parseFloat(import.meta.env[vehiclePriceKey] as string)
-			: 1 // Default vehicle price
 
 		// Extract distance in miles
 		const distanceInMiles =
 			parseFloat(routeDistance.displayValue.split(' ')[0]) || 0
 
 		// Calculate price: base * distance + vehicle price
-		return basePrice * distanceInMiles + vehiclePrice
+		return (
+			basePrice * distanceInMiles +
+			(import.meta.env[vehiclePriceKey]
+				? parseFloat(import.meta.env[vehiclePriceKey] as string)
+				: 1)
+		) // Default vehicle price
 	}
 
 	// Handle orders data changes
@@ -340,24 +363,24 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 
 			const vehicleCapacity =
 				VEHICLE_CAPACITY[
-					selectedVehicle as keyof typeof VEHICLE_CAPACITY
+					selectedVehicle.type as keyof typeof VEHICLE_CAPACITY
 				] || 0
 
 			if (data.totalWeight > vehicleCapacity) {
 				// Suggest next larger vehicle
 				let suggestedVehicle = 'suv'
-				if (selectedVehicle === 'car') {
+				if (selectedVehicle.type === 'car') {
 					suggestedVehicle = 'suv'
-				} else if (selectedVehicle === 'suv') {
+				} else if (selectedVehicle.type === 'suv') {
 					suggestedVehicle = 'pickup-truck'
-				} else if (selectedVehicle === 'pickup-truck') {
+				} else if (selectedVehicle.type === 'pickup-truck') {
 					suggestedVehicle = 'cargo-van'
 				} else {
 					suggestedVehicle = 'sprinter-van'
 				}
 
 				setCapacityWarning(
-					`The total weight (${data.totalWeight.toFixed(1)} lbs) exceeds the ${selectedVehicle} capacity of ${vehicleCapacity} lbs. Please consider upgrading to a ${suggestedVehicle}.`,
+					`The total weight (${data.totalWeight.toFixed(1)} lbs) exceeds the ${selectedVehicle.type} capacity of ${vehicleCapacity} lbs. Please consider upgrading to a ${suggestedVehicle}.`,
 				)
 			} else {
 				setCapacityWarning(null)
@@ -394,6 +417,9 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 			})
 		} else if (currentStep === 2 && selectedVehicle) {
 			// For Step 2 (Vehicle), save the selected vehicle type
+			const storeObj = useDeliveryFormStore.getState()
+			storeObj.setVehicleType(selectedVehicle)
+
 			nextStep({
 				vehicleType: selectedVehicle,
 			})
@@ -559,7 +585,7 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 								bookingId: bookingId,
 								amount: Math.round(totalPrice * 100), // Convert to cents for Stripe
 								currency: 'usd',
-								description: `Delivery booking - ${storeObj.vehicleType} vehicle, ${storeObj.routeDistance.toString()} miles`,
+								description: `Delivery booking - ${typeof storeObj.vehicleType === 'string' ? storeObj.vehicleType : storeObj.vehicleType?.type || 'unknown'} vehicle, ${storeObj.routeDistance.displayValue} miles`,
 							}),
 						},
 					)
@@ -707,7 +733,7 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 				return (
 					<VehicleSelection
 						onVehicleSelect={handleVehicleSelect}
-						selectedVehicle={selectedVehicle}
+						selectedVehicle={selectedVehicle?.type || null}
 					/>
 				)
 			case 3:

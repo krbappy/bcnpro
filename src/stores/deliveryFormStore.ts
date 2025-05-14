@@ -39,7 +39,10 @@ export interface DeliveryFormState {
 		meters: number
 		displayValue: string
 	}
-	vehicleType: string | null
+	vehicleType: {
+		type: string
+		additionalInfo?: string
+	} | null
 	deliveryTiming: {
 		date: string | null
 		timeWindow: string | null
@@ -63,7 +66,10 @@ export interface DeliveryFormState {
 		meters: number
 		displayValue: string
 	}) => void
-	setVehicleType: (vehicleType: string) => void
+	setVehicleType: (vehicleType: {
+		type: string
+		additionalInfo?: string
+	}) => void
 	setDeliveryTiming: (
 		date: string,
 		timeWindow: string,
