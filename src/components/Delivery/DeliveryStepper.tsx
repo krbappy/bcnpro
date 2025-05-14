@@ -280,6 +280,21 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 			time: timing.time || '',
 			isValid: timing.isValid !== false,
 		})
+
+		// Immediately update the store to ensure footer reflects the selection
+		const storeObj = useDeliveryFormStore.getState()
+		const timeWindowDisplay =
+			timing.type === 'scheduled'
+				? `Scheduled`
+				: timing.type === 'rush'
+					? 'FastTrak'
+					: 'Same Day'
+
+		storeObj.setDeliveryTiming(
+			timing.date || '',
+			timeWindowDisplay,
+			timing.isValid !== false,
+		)
 	}
 
 	// Get the display name for the selected vehicle
@@ -295,17 +310,34 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 	const getTimingDisplayName = (): string => {
 		// Get timing from Zustand store
 		const storeData = useDeliveryFormStore.getState()
-		return storeData.deliveryTiming.timeWindow || '-'
+		// Format the timing display to ensure consistency
+		const timeWindow = storeData.deliveryTiming.timeWindow || '-'
+
+		if (timeWindow === 'Rush') {
+			return 'FastTrak'
+		} else if (timeWindow === 'rush') {
+			return 'FastTrak'
+		}
+
+		return timeWindow
 	}
 
 	// Get total price for the current selection
 	const getTotalPrice = (): string => {
-		if (currentStep < 3 || !selectedTiming) return '-'
+		if (currentStep < 3) return '-'
 
 		const basePrice = calculatePrice()
 		let totalPrice = basePrice
 
-		if (selectedTiming.type === 'same-day') {
+		// Get the selected timing type from the store
+		const storeData = useDeliveryFormStore.getState()
+		const storeTimingWindow = storeData.deliveryTiming.timeWindow || ''
+
+		// Apply discount if Same Day is selected - check both local state and store
+		if (
+			selectedTiming?.type === 'same-day' ||
+			storeTimingWindow === 'Same Day'
+		) {
 			totalPrice = basePrice * 0.9 // 10% discount
 		}
 
@@ -436,19 +468,14 @@ export const DeliveryStepper: FunctionComponent<DeliveryStepperProps> = ({
 				return
 			}
 
-			// Save to store and proceed
-			storeObj.setDeliveryTiming(
-				selectedTiming.date || '',
-				selectedTiming.type === 'scheduled'
-					? `Scheduled (${selectedTiming.date} at ${selectedTiming.time})`
-					: selectedTiming.type === 'rush'
-						? 'Rush'
-						: 'Same Day',
-				isValid,
-			)
+			// The timeWindow and date are already set in the store by handleTimingSelect
+			// Just use the existing value instead of recalculating it
+			const currentTimingWindow = storeObj.deliveryTiming.timeWindow || ''
+
+			// Pass the existing date and timeWindow to nextStep to prevent overriding
 			nextStep({
-				date: selectedTiming.date || '',
-				timeWindow: selectedTiming.type,
+				date: storeObj.deliveryTiming.date || '',
+				timeWindow: currentTimingWindow,
 			})
 		} else if (currentStep === 4) {
 			// For Step 4 (Orders), check if there's a capacity warning

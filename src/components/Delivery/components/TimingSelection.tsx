@@ -139,7 +139,7 @@ export const TimingSelection: React.FC<TimingSelectionProps> = ({
 				// Invalid scheduled selection
 				timingString = 'Scheduled'
 			} else if (type === 'rush') {
-				timingString = 'Rush'
+				timingString = 'FastTrak'
 				// No date for rush
 			} else if (type === 'same-day') {
 				timingString = 'Same Day'
@@ -249,24 +249,53 @@ export const TimingSelection: React.FC<TimingSelectionProps> = ({
 
 	// Set initial selection on mount (only once)
 	useEffect(() => {
-		// Explicitly set the rush option as selected initially
-		const initialType = 'rush'
-		setSelectedValue(initialType)
+		// Check if there's already a timing selection in the store
+		const storeState = useDeliveryFormStore.getState()
+		const existingTiming = storeState.deliveryTiming
 
-		// Notify parent about initial selection
-		onTimingSelect({
-			type: initialType,
-			isValid: true,
-		})
+		// If there's an existing valid timing selection, use that
+		if (existingTiming.timeWindow) {
+			let type = 'rush' // default
 
-		// Update the store
-		updateTimingStore(initialType)
+			if (existingTiming.timeWindow.includes('Scheduled')) {
+				type = 'scheduled'
+				// Extract date and time if available
+				const match = existingTiming.timeWindow.match(
+					/Scheduled \((.+) at (.+)\)/,
+				)
+				if (match) {
+					setScheduledDate(match[1])
+					setScheduledTime(match[2])
+				}
+			} else if (existingTiming.timeWindow === 'Same Day') {
+				type = 'same-day'
+			}
+
+			// Set the selected value to match what's in the store
+			setSelectedValue(type)
+
+			// No need to call onTimingSelect here as the parent already knows the selection
+			// and we don't want to override anything in the store
+		} else {
+			// If no existing timing, set default to 'rush'
+			const initialType = 'rush'
+			setSelectedValue(initialType)
+
+			// Notify parent about initial selection
+			onTimingSelect({
+				type: initialType,
+				isValid: true,
+			})
+
+			// Update the store
+			updateTimingStore(initialType)
+		}
 
 		// This effect should only run once on mount
-		// eslint-disable-next-line
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [])
 
-	// Render the Rush option
+	// Render the FastTrak option (previously Rush)
 	const renderRushOption = () => {
 		const isSelected = selectedValue === 'rush'
 
@@ -314,7 +343,7 @@ export const TimingSelection: React.FC<TimingSelectionProps> = ({
 								fontSize="lg"
 								color={themeColors.text}
 							>
-								Rush
+								FastTrak
 							</Text>
 							<Text color={themeColors.gray} fontSize="sm">
 								We&apos;ll begin matching a driver to deliver
@@ -330,11 +359,6 @@ export const TimingSelection: React.FC<TimingSelectionProps> = ({
 								</Text>
 								<Icon as={FiInfo} ml={1} />
 							</Flex>
-
-							<Text color={themeColors.gray} fontSize="xs" mt={1}>
-								${basePerMile}/mi × {distanceInMiles} mi + $
-								{vehiclePrice} ({vehicleType.type})
-							</Text>
 						</VStack>
 					</HStack>
 					<Flex direction="column" align="flex-end">
@@ -409,11 +433,6 @@ export const TimingSelection: React.FC<TimingSelectionProps> = ({
 							<Text color={themeColors.gray} fontSize="sm">
 								Book your order by a certain time and we will
 								deliver it within the day
-							</Text>
-
-							<Text color={themeColors.gray} fontSize="xs" mt={1}>
-								(${basePerMile}/mi × {distanceInMiles} mi + $
-								{vehiclePrice}) × 0.9 (10% discount)
 							</Text>
 						</VStack>
 					</HStack>
@@ -509,11 +528,6 @@ export const TimingSelection: React.FC<TimingSelectionProps> = ({
 							<Text color={themeColors.gray} fontSize="sm">
 								Book your order for a future date and time to be
 								picked up
-							</Text>
-
-							<Text color={themeColors.gray} fontSize="xs" mt={1}>
-								${basePerMile}/mi × {distanceInMiles} mi + $
-								{vehiclePrice} ({vehicleType.type})
 							</Text>
 						</VStack>
 					</HStack>

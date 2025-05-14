@@ -290,8 +290,11 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ onEditSection }) => {
 					textTransform="lowercase"
 					color={themeColors.text}
 				>
-					{storeData.deliveryTiming.timeWindow?.toLowerCase() ||
-						'rush'}
+					{(storeData.deliveryTiming.timeWindow?.toLowerCase() ===
+					'rush'
+						? 'FastTrak'
+						: storeData.deliveryTiming.timeWindow?.toLowerCase()) ||
+						'FastTrak'}
 				</Text>
 				{storeData.deliveryTiming.date && (
 					<Text color={themeColors.gray}>
