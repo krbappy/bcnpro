@@ -129,6 +129,7 @@ export const InfoForm: React.FC<InfoFormProps> = ({ onInfoChange }) => {
 
 	// Get stop address display
 	const getAddressDisplay = (address: Address | undefined) => {
+		// console.log(address, stopId)
 		if (!address) return 'No address selected'
 		return address.place_name || address.text || 'Selected Location'
 	}
@@ -148,7 +149,7 @@ export const InfoForm: React.FC<InfoFormProps> = ({ onInfoChange }) => {
 					// Determine button color scheme
 					let colorScheme
 					if (index === 0) {
-						colorScheme = 'green'
+						colorScheme = 'orange'
 					} else if (index === stops.length - 1) {
 						colorScheme = 'red'
 					} else {
@@ -172,6 +173,10 @@ export const InfoForm: React.FC<InfoFormProps> = ({ onInfoChange }) => {
 							}}
 							minWidth="100px"
 							mt={2}
+							backgroundColor={
+								activeStop === stopId ? 'black' : 'white'
+							}
+							color={activeStop === stopId ? 'white' : 'black'}
 						>
 							{getStopTypeLabel(index, stops.length)}
 						</Button>
@@ -197,7 +202,7 @@ export const InfoForm: React.FC<InfoFormProps> = ({ onInfoChange }) => {
 								<Badge
 									colorScheme={
 										stopId === stops[0]
-											? 'green'
+											? ''
 											: stopId === stops[stops.length - 1]
 												? 'red'
 												: 'blue'
@@ -208,6 +213,16 @@ export const InfoForm: React.FC<InfoFormProps> = ({ onInfoChange }) => {
 									borderRadius="md"
 									fontWeight="bold"
 									textTransform="uppercase"
+									backgroundColor={
+										activeStop === stopId
+											? 'black'
+											: 'white'
+									}
+									color={
+										activeStop === stopId
+											? 'white'
+											: 'black'
+									}
 								>
 									{getStopTypeLabel(
 										stops.indexOf(stopId),
@@ -215,8 +230,10 @@ export const InfoForm: React.FC<InfoFormProps> = ({ onInfoChange }) => {
 									)}
 								</Badge>
 							</Box>
-							<Text fontSize="sm" color="gray.600">
-								{getAddressDisplay(selectedAddresses[stopId])}
+							<Text fontSize="sm" color="gray.600" maxW="200px">
+								{getAddressDisplay(
+									selectedAddresses[stopId === 1 ? 0 : 1],
+								)}
 							</Text>
 						</Flex>
 

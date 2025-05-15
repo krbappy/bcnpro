@@ -292,25 +292,11 @@ export const TimingSelection: React.FC<TimingSelectionProps> = ({
 		}
 
 		// This effect should only run once on mount
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [])
 
 	// Render the FastTrak option (previously Rush)
 	const renderRushOption = () => {
 		const isSelected = selectedValue === 'rush'
-
-		// Get pricing details
-		const distanceInMiles =
-			parseFloat(routeDistance.displayValue.split(' ')[0]) || 0
-		const basePerMile = import.meta.env.VITE_BASE_PRICE
-			? parseFloat(import.meta.env.VITE_BASE_PRICE as string)
-			: DEFAULT_BASE_PRICE
-		const vehiclePriceKey = `VITE_VEHICLE_PRICE_${vehicleType.type.toUpperCase().replace(/-/g, '_')}`
-		const vehiclePrice = import.meta.env[vehiclePriceKey]
-			? parseFloat(import.meta.env[vehiclePriceKey] as string)
-			: DEFAULT_VEHICLE_PRICES[
-					vehicleType.type as keyof typeof DEFAULT_VEHICLE_PRICES
-				] || 1
 
 		return (
 			<Box
@@ -379,19 +365,6 @@ export const TimingSelection: React.FC<TimingSelectionProps> = ({
 	const renderSameDayOption = () => {
 		const isSelected = selectedValue === 'same-day'
 		const isDisabled = !isSameDayAvailable
-
-		// Get pricing details
-		const distanceInMiles =
-			parseFloat(routeDistance.displayValue.split(' ')[0]) || 0
-		const basePerMile = import.meta.env.VITE_BASE_PRICE
-			? parseFloat(import.meta.env.VITE_BASE_PRICE as string)
-			: DEFAULT_BASE_PRICE
-		const vehiclePriceKey = `VITE_VEHICLE_PRICE_${vehicleType.type.toUpperCase().replace(/-/g, '_')}`
-		const vehiclePrice = import.meta.env[vehiclePriceKey]
-			? parseFloat(import.meta.env[vehiclePriceKey] as string)
-			: DEFAULT_VEHICLE_PRICES[
-					vehicleType.type as keyof typeof DEFAULT_VEHICLE_PRICES
-				] || 1
 
 		return (
 			<Box
@@ -479,19 +452,6 @@ export const TimingSelection: React.FC<TimingSelectionProps> = ({
 	// Render the Scheduled option
 	const renderScheduledOption = () => {
 		const isSelected = selectedValue === 'scheduled'
-
-		// Get pricing details
-		const distanceInMiles =
-			parseFloat(routeDistance.displayValue.split(' ')[0]) || 0
-		const basePerMile = import.meta.env.VITE_BASE_PRICE
-			? parseFloat(import.meta.env.VITE_BASE_PRICE as string)
-			: DEFAULT_BASE_PRICE
-		const vehiclePriceKey = `VITE_VEHICLE_PRICE_${vehicleType.type.toUpperCase().replace(/-/g, '_')}`
-		const vehiclePrice = import.meta.env[vehiclePriceKey]
-			? parseFloat(import.meta.env[vehiclePriceKey] as string)
-			: DEFAULT_VEHICLE_PRICES[
-					vehicleType.type as keyof typeof DEFAULT_VEHICLE_PRICES
-				] || 1
 
 		return (
 			<Box
