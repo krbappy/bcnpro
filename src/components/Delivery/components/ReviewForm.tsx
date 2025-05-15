@@ -120,6 +120,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ onEditSection }) => {
 			)
 		}, 0)
 	}
+	console.log(storeData)
 
 	// Render sections
 
@@ -168,21 +169,37 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ onEditSection }) => {
 				>
 					1
 				</Circle>
-
+				<Circle
+					size="28px"
+					bg={themeColors.accent}
+					color="white"
+					position="absolute"
+					left={'0px'}
+					top={'78px'}
+					fontSize="14px"
+					fontWeight="bold"
+				>
+					2
+				</Circle>
 				<VStack align="stretch" spacing={2}>
 					{storeData.stops.map((stopId) => {
-						const address = storeData.selectedAddresses[stopId]
-						return address ? (
+						console.log(storeData)
+						console.log('stopId', stopId)
+						const address1 = storeData.selectedAddresses[stopId - 1]
+
+						return address1 ? (
 							<Box key={stopId} ml={2}>
 								<Text
 									fontWeight="bold"
 									color={themeColors.text}
 								>
-									{address.name || 'Pickup Location'}
+									{stopId === 1
+										? 'Pickup Location'
+										: 'Dropoff Location'}
 								</Text>
 								<Text color={themeColors.gray}>
-									{address.formatted_address ||
-										address.place_name ||
+									{address1.formatted_address ||
+										address1.place_name ||
 										'Address not specified'}
 								</Text>
 							</Box>
