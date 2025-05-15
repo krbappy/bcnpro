@@ -329,7 +329,9 @@ export const InfoForm: React.FC<InfoFormProps> = ({ onInfoChange }) => {
 
 						<FormControl>
 							<FormLabel color="gray.700" fontWeight="medium">
-								Address Notes (Optional)
+								{stopId === stops[0]
+									? 'Pickup Instructions (Optional)'
+									: 'Dropoff Instructions (Optional)'}
 							</FormLabel>
 							<Textarea
 								placeholder="Special instructions or notes"
@@ -394,6 +396,11 @@ export const InfoForm: React.FC<InfoFormProps> = ({ onInfoChange }) => {
 							width="40px"
 							height="40px"
 							p={0}
+							backgroundColor={
+								activeStop === stopId ? 'black' : 'white'
+							}
+							color={activeStop === stopId ? 'white' : 'black'}
+							mb={4}
 						>
 							{index + 1}
 						</Button>
