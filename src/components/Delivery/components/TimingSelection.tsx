@@ -21,18 +21,83 @@ import { useDeliveryFormStore } from '../../../stores/deliveryFormStore'
 // Default pricing constants (fallback if env vars not set)
 const DEFAULT_BASE_PRICE = 5
 const DEFAULT_VEHICLE_PRICES = {
-	car: 1,
-	suv: 5,
-	'cargo-van': 10,
-	'pickup-truck': 8,
-	'rack-vehicle': 12,
+	car: 5,
+	suv: 10,
+	'cargo-van': 15,
+	'pickup-truck': 15,
+	'rack-vehicle': 15,
 	'sprinter-van': 15,
-	'vehicle-with-hitch': 12,
+	'vehicle-with-hitch': 15,
 	'box-truck': 20,
-	'box-truck-liftgate': 22,
+	'box-truck-liftgate': 20,
 	'open-deck': 25,
-	'hotshot-trailer': 30,
-	flatbed: 35,
+	'hotshot-trailer': 25,
+	flatbed: 25,
+	'48-53-flatbed-or-dry-van': 25,
+}
+
+// Updated pricing constants based on rate sheet
+const VEHICLE_RATES = {
+	car: {
+		baseRate: 2.1, // $ per mile
+		vehicleFee: 5, // Fixed vehicle fee
+		multiplier: 1.0, // Distance multiplier
+	},
+	suv: {
+		baseRate: 2.5,
+		vehicleFee: 10,
+		multiplier: 1.0,
+	},
+	'pickup-truck': {
+		baseRate: 3.0,
+		vehicleFee: 15,
+		multiplier: 1.05,
+	},
+	'rack-vehicle': {
+		baseRate: 3.25,
+		vehicleFee: 15,
+		multiplier: 1.1,
+	},
+	'cargo-van': {
+		baseRate: 3.5,
+		vehicleFee: 15,
+		multiplier: 1.1,
+	},
+	'sprinter-van': {
+		baseRate: 4.0,
+		vehicleFee: 15,
+		multiplier: 1.15,
+	},
+	'box-truck': {
+		baseRate: 5.0,
+		vehicleFee: 20,
+		multiplier: 1.2,
+	},
+	'box-truck-liftgate': {
+		baseRate: 5.5,
+		vehicleFee: 20,
+		multiplier: 1.25,
+	},
+	'open-deck': {
+		baseRate: 6.5,
+		vehicleFee: 25,
+		multiplier: 1.25,
+	},
+	'hotshot-trailer': {
+		baseRate: 6.75,
+		vehicleFee: 25,
+		multiplier: 1.25,
+	},
+	flatbed: {
+		baseRate: 7.75,
+		vehicleFee: 25,
+		multiplier: 1.3,
+	},
+	'48-53-flatbed-or-dry-van': {
+		baseRate: 8.75,
+		vehicleFee: 25,
+		multiplier: 1.3,
+	},
 }
 
 interface TimingSelectionProps {
@@ -82,33 +147,58 @@ export const TimingSelection: React.FC<TimingSelectionProps> = ({
 
 	// Calculate price based on distance and vehicle type
 	const calculatePrice = (): number => {
-		// Get base price from env or use default
-		const basePrice = import.meta.env.VITE_BASE_PRICE
-			? parseFloat(import.meta.env.VITE_BASE_PRICE as string)
-			: DEFAULT_BASE_PRICE
-
-		// Get vehicle-specific price from env or use default
+		// Get the vehicle type
 		const vehicleTypeKey =
 			typeof vehicleType === 'string' ? vehicleType : vehicleType.type
-		const vehiclePriceKey = `VITE_VEHICLE_PRICE_${vehicleTypeKey.toUpperCase().replace(/-/g, '_')}`
-		const vehiclePrice = import.meta.env[vehiclePriceKey]
-			? parseFloat(import.meta.env[vehiclePriceKey] as string)
-			: DEFAULT_VEHICLE_PRICES[
-					vehicleTypeKey as keyof typeof DEFAULT_VEHICLE_PRICES
-				] || 1
+
+		// Get rate information for this vehicle type
+		const vehicleRate =
+			VEHICLE_RATES[vehicleTypeKey as keyof typeof VEHICLE_RATES]
+
+		// If the vehicle type isn't in our rate table, use default pricing instead
+		if (!vehicleRate) {
+			// Get base price from env or use default
+			const basePrice = import.meta.env.VITE_BASE_PRICE
+				? parseFloat(import.meta.env.VITE_BASE_PRICE as string)
+				: DEFAULT_BASE_PRICE
+
+			// Get vehicle-specific price from env or use default
+			const vehiclePriceKey = `VITE_VEHICLE_PRICE_${vehicleTypeKey.toUpperCase().replace(/-/g, '_')}`
+			const vehiclePrice = import.meta.env[vehiclePriceKey]
+				? parseFloat(import.meta.env[vehiclePriceKey] as string)
+				: DEFAULT_VEHICLE_PRICES[
+						vehicleTypeKey as keyof typeof DEFAULT_VEHICLE_PRICES
+					] || 1
+
+			// Extract distance in miles
+			const distanceInMiles =
+				parseFloat(routeDistance.displayValue.split(' ')[0]) || 0
+
+			// Calculate final price: base * distance + vehicle price
+			return basePrice * distanceInMiles + vehiclePrice
+		}
 
 		// Extract distance in miles
 		const distanceInMiles =
 			parseFloat(routeDistance.displayValue.split(' ')[0]) || 0
 
-		// Calculate final price: base * distance + vehicle price
-		return basePrice * distanceInMiles + vehiclePrice
+		// Calculate price using the formula from the rate sheet:
+		// (Base Rate * Distance * Multiplier) + Vehicle Fee
+		const price =
+			vehicleRate.baseRate * distanceInMiles * vehicleRate.multiplier +
+			vehicleRate.vehicleFee
+
+		return price
 	}
 
+	// Apply timing multipliers based on the rate sheet
 	const basePrice = calculatePrice()
-	const sameDayPrice = (basePrice * 0.9).toFixed(2) // 10% discount
+	// FastTrak (Rush) has a 1.00 multiplier (standard rate)
 	const rushPrice = basePrice.toFixed(2)
-	const scheduledPrice = basePrice.toFixed(2)
+	// Same Day has a 0.90 multiplier (10% discount)
+	const sameDayPrice = (basePrice * 0.9).toFixed(2)
+	// Scheduled has a 0.85 multiplier (15% discount)
+	const scheduledPrice = (basePrice * 0.85).toFixed(2)
 
 	// Helper to update the Zustand store with the current timing selection
 	const updateTimingStore = useCallback(
@@ -498,6 +588,13 @@ export const TimingSelection: React.FC<TimingSelectionProps> = ({
 							color={themeColors.text}
 						>
 							${scheduledPrice}
+						</Text>
+						<Text
+							fontSize="sm"
+							color="green.500"
+							fontWeight="medium"
+						>
+							Save ${(basePrice * 0.15).toFixed(2)}
 						</Text>
 					</Flex>
 				</Flex>
