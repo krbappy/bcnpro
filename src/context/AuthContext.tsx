@@ -37,6 +37,8 @@ interface UserProfile {
 	firebaseUid: string
 	email: string
 	name?: string
+	phone?: string
+	createdAt?: string
 	// Add other fields from your MongoDB user model
 }
 

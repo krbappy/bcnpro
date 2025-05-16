@@ -10,11 +10,14 @@ import {
 	useToast,
 	Flex,
 	Spinner,
+	Box,
 } from '@chakra-ui/react'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import PaymentMethods from '../components/Account/PaymentMethods'
 import ProfileSettings from '../components/Account/ProfileSettings'
+import BillingHistory from '../components/Account/BillingHistory'
+import UserInfo from '../components/Account/UserInfo'
 
 export default function Account() {
 	const { currentUser } = useAuth()
@@ -49,6 +52,10 @@ export default function Account() {
 
 	return (
 		<Container maxW="container.lg" py={8}>
+			<Box mb={4}>
+				<UserInfo />
+			</Box>
+
 			<Heading mb={6} color="orange.500">
 				My Account
 			</Heading>
@@ -57,6 +64,7 @@ export default function Account() {
 				<TabList>
 					<Tab>Profile</Tab>
 					<Tab>Payment Methods</Tab>
+					<Tab>Billing History</Tab>
 				</TabList>
 
 				<TabPanels>
@@ -65,6 +73,9 @@ export default function Account() {
 					</TabPanel>
 					<TabPanel>
 						<PaymentMethods />
+					</TabPanel>
+					<TabPanel>
+						<BillingHistory />
 					</TabPanel>
 				</TabPanels>
 			</Tabs>

@@ -254,7 +254,6 @@ const AddressBook: React.FC = () => {
 			px={{ base: 2, md: 8 }}
 			py={6}
 			mx={'auto'}
-			w={'70%'}
 		>
 			<Heading fontSize="2xl" color={themeColors.secondary} mb={1}>
 				Address Book
