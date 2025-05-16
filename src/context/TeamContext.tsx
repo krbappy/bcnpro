@@ -12,6 +12,7 @@ import { teamService } from '../services/teamService'
 export interface Team {
 	id: string
 	name: string
+	location?: string
 	createdAt: string
 	updatedAt: string
 }
@@ -27,6 +28,7 @@ interface ApiTeam {
 	id?: string
 	_id?: string
 	name: string
+	location?: string
 	createdAt: string
 	updatedAt: string
 	members?: ApiMember[]
@@ -49,7 +51,7 @@ interface ApiMember {
 export interface TeamContextType {
 	teams: Team[]
 	members: TeamMember[]
-	createTeam: (name: string) => Promise<void>
+	createTeam: (name: string, location?: string) => Promise<void>
 	inviteTeamMember: (
 		teamId: string,
 		email: string,
@@ -69,69 +71,62 @@ export const TeamProvider: React.FC<{ children: ReactNode }> = ({
 	const [members, setMembers] = useState<TeamMember[]>([])
 	const { currentUser } = useAuth()
 
-	// Fetch team data on component mount or user change
-	useEffect(() => {
-		const fetchTeamData = async () => {
-			if (!currentUser) {
-				setTeams([])
-				setMembers([])
-				return
-			}
-
-			try {
-				const response = await teamService.getMyTeam()
-				// Ensure we're handling the response as an array
-				const teamsData = (
-					Array.isArray(response) ? response : [response]
-				) as ApiTeam[]
-				setTeams(
-					teamsData.map((team) => ({
-						id: team.id || team._id || '',
-						name: team.name,
-						createdAt: team.createdAt,
-						updatedAt: team.updatedAt,
-					})),
-				)
-
-				// Extract members from all teams
-				const allMembers = teamsData.flatMap(
-					(team) => team.members || [],
-				)
-				setMembers(
-					allMembers.map((member) => ({
-						id: member.user?._id || '',
-						email: member.email || member.user?.email || '',
-						role: member.role,
-						status: (member.status ||
-							member.invitationStatus ||
-							'pending') as 'active' | 'pending' | 'inactive',
-					})),
-				)
-			} catch (err) {
-				console.error('Failed to fetch team data', err)
-				// Set empty arrays on error to prevent mapping issues
-				setTeams([])
-				setMembers([])
-			}
+	// Fetch team data function
+	const fetchTeamData = async () => {
+		if (!currentUser) {
+			setTeams([])
+			setMembers([])
+			return
 		}
 
+		try {
+			const response = await teamService.getMyTeam()
+			// Ensure we're handling the response as an array
+			const teamsData = (
+				Array.isArray(response) ? response : [response]
+			) as ApiTeam[]
+			setTeams(
+				teamsData.map((team) => ({
+					id: team.id || team._id || '',
+					name: team.name,
+					location: team.location,
+					createdAt: team.createdAt,
+					updatedAt: team.updatedAt,
+				})),
+			)
+
+			// Extract members from all teams
+			const allMembers = teamsData.flatMap((team) => team.members || [])
+			setMembers(
+				allMembers.map((member) => ({
+					id: member.user?._id || '',
+					email: member.email || member.user?.email || '',
+					role: member.role,
+					status: (member.status ||
+						member.invitationStatus ||
+						'pending') as 'active' | 'pending' | 'inactive',
+				})),
+			)
+		} catch (err) {
+			console.error('Failed to fetch team data', err)
+			// Set empty arrays on error to prevent mapping issues
+			setTeams([])
+			setMembers([])
+		}
+	}
+
+	// Fetch team data on component mount or user change
+	useEffect(() => {
 		fetchTeamData()
 	}, [currentUser])
 
 	// Create a new team
-	const createTeam = async (name: string) => {
+	const createTeam = async (name: string, location?: string) => {
 		try {
-			const response = await teamService.createTeam(name)
-			const newTeam: Team = {
-				id:
-					(response as unknown as ApiTeam).id ||
-					(response as unknown as ApiTeam)._id ||
-					'',
-				name: (response as unknown as ApiTeam).name,
-				createdAt: (response as unknown as ApiTeam).createdAt,
-				updatedAt: (response as unknown as ApiTeam).updatedAt,
-			}
-			setTeams((prevTeams) => [...prevTeams, newTeam])
+			await teamService.createTeam(name, location)
+
+			// Force a refresh of team data to ensure we have the latest data from the backend
+			await fetchTeamData()
 		} catch (err) {
 			console.error('Failed to create team', err)
 			throw err

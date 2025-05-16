@@ -13,6 +13,7 @@ import { useTeam } from '../context/TeamContext'
 
 export const CreateTeam: FunctionComponent = (): ReactElement => {
 	const [name, setName] = useState('')
+	const [location, setLocation] = useState('')
 	const [isLoading, setIsLoading] = useState(false)
 	const toast = useToast()
 	const { createTeam } = useTeam()
@@ -22,7 +23,7 @@ export const CreateTeam: FunctionComponent = (): ReactElement => {
 		setIsLoading(true)
 
 		try {
-			await createTeam(name)
+			await createTeam(name, location)
 			toast({
 				title: 'Team created successfully',
 				status: 'success',
@@ -30,6 +31,7 @@ export const CreateTeam: FunctionComponent = (): ReactElement => {
 				isClosable: true,
 			})
 			setName('')
+			setLocation('')
 		} catch (error) {
 			toast({
 				title: 'Failed to create team',
@@ -52,12 +54,20 @@ export const CreateTeam: FunctionComponent = (): ReactElement => {
 				Create New Team
 			</Heading>
 			<Box as="form" onSubmit={handleSubmit}>
-				<FormControl isRequired>
+				<FormControl isRequired mb={4}>
 					<FormLabel>Team Name</FormLabel>
 					<Input
 						value={name}
 						onChange={(e) => setName(e.target.value)}
 						placeholder="Enter team name"
+					/>
+				</FormControl>
+				<FormControl mb={4}>
+					<FormLabel>Location</FormLabel>
+					<Input
+						value={location}
+						onChange={(e) => setLocation(e.target.value)}
+						placeholder="Enter team location"
 					/>
 				</FormControl>
 				<Button

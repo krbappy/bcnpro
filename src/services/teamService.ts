@@ -16,6 +16,7 @@ interface TeamMember {
 interface Team {
 	_id: string
 	name: string
+	location?: string
 	owner: string
 	members: TeamMember[]
 }
@@ -48,11 +49,11 @@ class TeamService {
 	}
 
 	// Create a new team
-	async createTeam(name: string): Promise<Team> {
+	async createTeam(name: string, location?: string): Promise<Team> {
 		const headers = await this.getAuthHeaders()
 		const response = await axios.post(
 			this.baseUrl,
-			{ name },
+			{ name, location },
 			{
 				headers,
 				withCredentials: true,

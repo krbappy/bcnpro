@@ -29,16 +29,37 @@ import { CreateTeam } from '../components/CreateTeam'
 import { useAuth } from '../context/AuthContext'
 
 export const TeamManagement: FunctionComponent = (): ReactElement => {
+	const { members, teams } = useTeam()
+	const { currentUser } = useAuth()
+
+	// Check if user belongs to any team - also check teams existence
+	const isUserInTeam =
+		teams?.length > 0 ||
+		members.some((member) => member.email === currentUser?.email)
+
+	// Check if user is owner or admin in any team
+	const getUserRole = () => {
+		const userMember = members.find(
+			(member) => member.email === currentUser?.email,
+		)
+		return userMember?.role || null
+	}
+
+	const userRole = getUserRole()
+	const canManageTeam = userRole === 'owner' || userRole === 'admin'
+
 	return (
 		<Box p={4} w={'50%'} mx={'auto'}>
-			<CreateTeam />
-			<ManageTeamComponent />
-			<InviteTeamMemberComponent />
+			{!isUserInTeam && <CreateTeam />}
+			<ManageTeamComponent canManageTeam={canManageTeam} />
+			{canManageTeam && <InviteTeamMemberComponent />}
 		</Box>
 	)
 }
 
-const ManageTeamComponent: FunctionComponent = (): ReactElement => {
+const ManageTeamComponent: FunctionComponent<{ canManageTeam: boolean }> = ({
+	canManageTeam,
+}): ReactElement => {
 	const { teams, members, removeMember } = useTeam()
 	const { currentUser } = useAuth()
 	const toast = useToast()
@@ -81,7 +102,8 @@ const ManageTeamComponent: FunctionComponent = (): ReactElement => {
 				<AlertIcon />
 				<AlertTitle>No Teams Available</AlertTitle>
 				<AlertDescription>
-					Create a team to start managing team members.
+					You are not part of any team. Wait for an invitation or
+					create a team to get started.
 				</AlertDescription>
 			</Alert>
 		)
@@ -112,7 +134,7 @@ const ManageTeamComponent: FunctionComponent = (): ReactElement => {
 							<Th>Member</Th>
 							<Th>Role</Th>
 							<Th>Status</Th>
-							<Th>Actions</Th>
+							{canManageTeam && <Th>Actions</Th>}
 						</Tr>
 					</Thead>
 					<Tbody>
@@ -125,24 +147,27 @@ const ManageTeamComponent: FunctionComponent = (): ReactElement => {
 								<Td>
 									<StatusBadge status={member.status} />
 								</Td>
-								<Td>
-									{member.role !== 'owner' &&
-										member.email !== currentUser?.email && (
-											<Button
-												size="sm"
-												colorScheme="red"
-												leftIcon={<FiTrash />}
-												onClick={() =>
-													handleRemoveMember(
-														selectedTeamId,
-														member.id,
-													)
-												}
-											>
-												Remove
-											</Button>
-										)}
-								</Td>
+								{canManageTeam && (
+									<Td>
+										{member.role !== 'owner' &&
+											member.email !==
+												currentUser?.email && (
+												<Button
+													size="sm"
+													colorScheme="red"
+													leftIcon={<FiTrash />}
+													onClick={() =>
+														handleRemoveMember(
+															selectedTeamId,
+															member.id,
+														)
+													}
+												>
+													Remove
+												</Button>
+											)}
+									</Td>
+								)}
 							</Tr>
 						))}
 					</Tbody>
@@ -195,15 +220,7 @@ const InviteTeamMemberComponent: FunctionComponent = (): ReactElement => {
 	}
 
 	if (!teams || teams.length === 0) {
-		return (
-			<Alert status="warning" mt={4}>
-				<AlertIcon />
-				<AlertTitle>No Teams Available</AlertTitle>
-				<AlertDescription>
-					Please create a team before inviting members.
-				</AlertDescription>
-			</Alert>
-		)
+		return <Box mt={4}></Box>
 	}
 
 	return (
